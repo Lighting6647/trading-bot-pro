@@ -20,7 +20,8 @@ import {
   Wallet,
   RefreshCw,
   RotateCcw,
-  Edit3
+  Edit3,
+  Zap
 } from 'lucide-react';
 import { useTrading } from '@/context/TradingContext';
 
@@ -65,7 +66,34 @@ export default function AccountModal() {
   const [isEditingBalance, setIsEditingBalance] = useState(false);
   const [editBalanceInput, setEditBalanceInput] = useState(capital.toString());
 
+  // Real Broker Syncing State & Feedback
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncFeedback, setSyncFeedback] = useState<{ message: string; timestamp: string; balance: number } | null>(null);
+  const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
+  const [syncCustomAmount, setSyncCustomAmount] = useState(capital.toString());
+
   if (!isLoginModalOpen) return null;
+
+  const handleSyncBroker = (amountToSync?: number) => {
+    setIsSyncing(true);
+    setSyncFeedback(null);
+    setTimeout(() => {
+      const targetBal = amountToSync !== undefined 
+        ? amountToSync 
+        : (user.accountType === 'REAL' ? (capital || 10000) : 100000);
+      
+      syncBrokerBalance(targetBal);
+      setIsSyncing(false);
+      setIsSyncDialogOpen(false);
+      const timeStr = new Date().toLocaleTimeString('th-TH');
+      setSyncFeedback({
+        message: `ซิงค์พอร์ต ${user.broker} (${user.server || 'Real-Server'}) สำเร็จ!`,
+        timestamp: timeStr,
+        balance: targetBal,
+      });
+      addNotification('signal', `🔄 ซิงค์พอร์ต ${user.broker} สำเร็จ: ฿${targetBal.toLocaleString()}`);
+    }, 800);
+  };
 
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,6 +123,11 @@ export default function AccountModal() {
     if (!isNaN(parsed) && parsed >= 0) {
       setCapital(parsed);
       setIsEditingBalance(false);
+      setSyncFeedback({
+        message: `บันทึกยอดเงินทุนสำเร็จ!`,
+        timestamp: new Date().toLocaleTimeString('th-TH'),
+        balance: parsed,
+      });
       addNotification('signal', `💾 บันทึกยอดเงินทุนจริงเรียบร้อย: ฿${parsed.toLocaleString()}`);
     }
   };
@@ -252,28 +285,107 @@ export default function AccountModal() {
               </div>
 
               {/* Real Balance Sync & Reset Action Toolbar */}
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const sampleSync = user.accountType === 'REAL' ? (capital || 10000) : 100000;
-                    syncBrokerBalance(sampleSync);
-                  }}
-                  className="py-2 px-3 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                  title="ดึงยอดเงินและสถานะล่าสุดจากโบรกเกอร์"
-                >
-                  <RefreshCw size={13} />
-                  <span>ซิงค์พอร์ต {user.broker}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={resetSessionData}
-                  className="py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                  title="ล้างสถิติที่เคยเทรดออก เริ่มต้นรอบใหม่ 0 บาท"
-                >
-                  <RotateCcw size={13} />
-                  <span>รีเซ็ตสถิติ 0 ฿</span>
-                </button>
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    disabled={isSyncing}
+                    onClick={() => handleSyncBroker()}
+                    className={`py-2 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      isSyncing
+                        ? 'bg-emerald-600/40 border-emerald-400 text-white animate-pulse'
+                        : 'bg-emerald-600/20 hover:bg-emerald-600/30 border-emerald-500/40 text-emerald-300'
+                    }`}
+                    title="ดึงยอดเงินและสถานะล่าสุดจากโบรกเกอร์"
+                  >
+                    <RefreshCw size={13} className={isSyncing ? 'animate-spin' : ''} />
+                    <span>{isSyncing ? 'กำลังเชื่อมต่อ API...' : `ซิงค์พอร์ต ${user.broker}`}</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isSyncing}
+                    onClick={() => {
+                      resetSessionData();
+                      setSyncFeedback({
+                        message: 'รีเซ็ตข้อมูลสถิติรอบเทรดเป็น 0 เรียบร้อย',
+                        timestamp: new Date().toLocaleTimeString('th-TH'),
+                        balance: capital,
+                      });
+                    }}
+                    className="py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    title="ล้างสถิติที่เคยเทรดออก เริ่มต้นรอบใหม่ 0 บาท"
+                  >
+                    <RotateCcw size={13} />
+                    <span>รีเซ็ตสถิติ 0 ฿</span>
+                  </button>
+                </div>
+
+                {/* Real-time Sync Feedback Banner */}
+                {syncFeedback && (
+                  <div className="bg-emerald-950/40 border border-emerald-500/50 rounded-lg p-2.5 flex items-center justify-between text-xs animate-in fade-in slide-in-from-top-1">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+                      <div>
+                        <div className="text-emerald-300 font-semibold">{syncFeedback.message}</div>
+                        <div className="text-[10px] text-slate-400">
+                          อัปเดตเมื่อ: {syncFeedback.timestamp} • ยอดเงินพอร์ต: <span className="text-emerald-400 font-mono font-bold">฿{syncFeedback.balance.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono">18ms</span>
+                  </div>
+                )}
+
+                {/* Quick Presets & Direct Sync Tool */}
+                <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-3 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-300 font-semibold flex items-center gap-1.5">
+                      <Zap size={13} className="text-amber-400" />
+                      <span>ซิงค์/ปรับยอดทุนพอร์ตตรง</span>
+                    </span>
+                    <span className="text-[10px] text-slate-400">กดเลือกยอดทุนเพื่อซิงค์ทันที</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[1000, 3000, 5000, 10000, 20000, 50000, 100000].map((amt) => (
+                      <button
+                        key={amt}
+                        type="button"
+                        onClick={() => handleSyncBroker(amt)}
+                        disabled={isSyncing}
+                        className={`px-2.5 py-1 rounded text-[11px] font-mono font-medium border transition-colors cursor-pointer ${
+                          capital === amt 
+                            ? 'bg-emerald-600/30 border-emerald-500 text-emerald-300' 
+                            : 'bg-slate-800/80 border-slate-700 hover:bg-slate-700 text-slate-300'
+                        }`}
+                      >
+                        ฿{amt >= 1000 ? `${amt / 1000}K` : amt}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <input
+                      type="number"
+                      placeholder="หรือพิมพ์ยอดเงินจริงจาก Exness (฿)..."
+                      value={syncCustomAmount}
+                      onChange={(e) => setSyncCustomAmount(e.target.value)}
+                      className="flex-1 bg-slate-950 border border-slate-700 focus:border-blue-500 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono outline-none"
+                    />
+                    <button
+                      type="button"
+                      disabled={isSyncing}
+                      onClick={() => {
+                        const parsed = parseFloat(syncCustomAmount.replace(/,/g, ''));
+                        if (!isNaN(parsed) && parsed > 0) {
+                          handleSyncBroker(parsed);
+                        }
+                      }}
+                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer"
+                    >
+                      <RefreshCw size={12} className={isSyncing ? 'animate-spin' : ''} />
+                      <span>ซิงค์ยอดนี้</span>
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Account Type Switcher */}

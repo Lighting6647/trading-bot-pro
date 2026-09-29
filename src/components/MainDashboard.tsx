@@ -38,7 +38,8 @@ export default function MainDashboard() {
     setTargetAction,
     addNotification,
     user,
-    setIsLoginModalOpen
+    setIsLoginModalOpen,
+    resetSessionData
   } = useTrading();
 
   const [activeFilter, setActiveFilter] = useState('ทั้งหมด');
@@ -178,10 +179,12 @@ export default function MainDashboard() {
                <button
                  onClick={() => setIsLoginModalOpen(true)}
                  className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 hover:border-blue-500/40 text-[11px] font-mono text-slate-300 transition-colors cursor-pointer"
-                 title="คลิกเพื่อจัดการบัญชีและเข้าสู่ระบบ"
+                 title="คลิกเพื่อจัดการพอร์ตและซิงค์ยอดเงินจริง"
                >
-                 <span className="w-1.5 h-1.5 rounded-full bg-green-400"></span>
-                 <span>ID: {user.email}</span>
+                 <span className={`w-1.5 h-1.5 rounded-full ${user.accountType === 'REAL' ? 'bg-green-400' : 'bg-amber-400'}`}></span>
+                 <span>{user.broker}: {user.email}</span>
+                 <span className="text-slate-500">•</span>
+                 <span className="text-amber-400 font-bold">฿{capital.toLocaleString()}</span>
                </button>
                <button 
                  onClick={handleRefresh} 
@@ -280,27 +283,72 @@ export default function MainDashboard() {
                 </div>
               </div>
 
-              {/* Past Session Samples */}
-              <div className="bg-[#131b2f]/60 border border-slate-800/80 rounded p-3 opacity-75">
-                <div className="flex justify-between items-center mb-1 text-xs">
-                   <span className="text-slate-400">16 ก.ย. 2569 | 21:02 &gt; 21:19</span>
-                   <span className="text-green-400 font-mono">+13,388 ฿</span>
+              {/* Past Session Samples / Real Broker Live Status */}
+              {user.accountType === 'REAL' ? (
+                <div className="bg-emerald-950/20 border border-emerald-500/30 rounded p-3 text-xs space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-emerald-400 font-semibold">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                      {user.broker || 'Exness'} พอร์ตจริง
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono">
+                      {user.server || 'Exness-Real'}
+                    </span>
+                  </div>
+                  <div className="text-slate-400 text-[11px]">
+                    บัญชี: <span className="text-slate-200 font-mono font-medium">{user.email}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-800/80">
+                    <span className="text-slate-400">ทุนตั้งต้น:</span>
+                    <span className="font-mono text-emerald-400 font-bold">฿{capital.toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-slate-400">Equity รวม:</span>
+                    <span className={`font-mono font-bold ${capital + profit >= capital ? 'text-green-400' : 'text-red-400'}`}>
+                      ฿{(capital + profit).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="pt-2 flex gap-1.5">
+                    <button
+                      onClick={() => setIsLoginModalOpen(true)}
+                      className="flex-1 py-1 px-2 rounded bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 text-[10px] font-medium transition-colors text-center"
+                    >
+                      ⚙️ จัดการพอร์ต / แก้ไขทุน
+                    </button>
+                    <button
+                      onClick={() => {
+                        resetSessionData();
+                        addNotification('signal', '🧹 รีเซ็ตสถิติรอบเทรดเป็น 0 เรียบร้อย');
+                      }}
+                      className="py-1 px-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] transition-colors"
+                      title="เริ่มรอบสถิติใหม่ (0 ฿)"
+                    >
+                      รีเซ็ต
+                    </button>
+                  </div>
                 </div>
-                <div className="text-[10px] text-slate-500 flex justify-between">
-                   <span>ชนะ 65.2% • 22 ไม้</span>
-                   <span className="text-green-500">สำเร็จ</span>
+              ) : (
+                <div className="space-y-2">
+                  <div className="bg-[#131b2f]/60 border border-slate-800/80 rounded p-3 opacity-75">
+                    <div className="flex justify-between items-center mb-1 text-xs">
+                       <span className="text-slate-400">รอบจำลอง (Demo Session)</span>
+                       <span className="text-green-400 font-mono">+13,388 ฿</span>
+                    </div>
+                    <div className="text-[10px] text-slate-500 flex justify-between">
+                       <span>ชนะ 65.2% • 22 ไม้</span>
+                       <span className="text-green-500">สำเร็จ</span>
+                    </div>
+                  </div>
+                  <div className="p-2.5 rounded bg-blue-950/20 border border-blue-500/20 text-center">
+                    <button
+                      onClick={() => setIsLoginModalOpen(true)}
+                      className="text-xs text-blue-400 hover:text-blue-300 font-medium"
+                    >
+                      🚀 สลับไปใช้พอร์ตจริง (Real Account)
+                    </button>
+                  </div>
                 </div>
-              </div>
-              <div className="bg-[#131b2f]/60 border border-slate-800/80 rounded p-3 opacity-60">
-                <div className="flex justify-between items-center mb-1 text-xs">
-                   <span className="text-slate-400">16 ก.ย. 2569 | 13:24 &gt; 15:38</span>
-                   <span className="text-red-400 font-mono">-93,625 ฿</span>
-                </div>
-                <div className="text-[10px] text-slate-500 flex justify-between">
-                   <span>ชนะ 42.1% • 54 ไม้</span>
-                   <span className="text-red-400">ตัด SL</span>
-                </div>
-              </div>
+              )}
             </div>
           </div>
 

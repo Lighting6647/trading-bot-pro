@@ -106,6 +106,10 @@ export type UserAccount = {
   broker: string;
   accountType: 'DEMO' | 'REAL';
   accountNumber: string;
+  server?: string;
+  realBalance: number;
+  demoBalance: number;
+  currency: string;
   isLoggedIn: boolean;
 };
 
@@ -123,7 +127,12 @@ type TradingContextType = {
   setSettings: (s: Settings) => void;
   trades: Trade[];
   capital: number;
+  setCapital: (v: number) => void;
   profit: number;
+  setProfit: (v: number) => void;
+  setTrades: React.Dispatch<React.SetStateAction<Trade[]>>;
+  syncBrokerBalance: (newBalance: number) => void;
+  resetSessionData: () => void;
   activePanel: string;
   setActivePanel: (v: string) => void;
 
@@ -133,7 +142,14 @@ type TradingContextType = {
   isLoginModalOpen: boolean;
   setIsLoginModalOpen: (v: boolean) => void;
   switchAccountType: (type: 'DEMO' | 'REAL') => void;
-  login: (data: { email: string; broker: string; accountType: 'DEMO' | 'REAL'; accountNumber?: string }) => void;
+  login: (data: { 
+    email: string; 
+    broker: string; 
+    accountType: 'DEMO' | 'REAL'; 
+    accountNumber?: string;
+    server?: string;
+    balance?: number;
+  }) => void;
   logout: () => void;
 
   // Language
@@ -252,11 +268,15 @@ const defaultTimeframes: TimeframeAnalysis[] = [
 ];
 
 const defaultUser: UserAccount = {
-  email: 'center.art@mss.com',
-  name: 'Center Art Pro Trader',
-  broker: 'IQ Option',
-  accountType: 'DEMO',
-  accountNumber: 'ACC-8839210',
+  email: 'lighting6647@gmail.com',
+  name: 'Lighting6647',
+  broker: 'Exness',
+  accountType: 'REAL',
+  accountNumber: 'EXN-7739210',
+  server: 'Exness-Real19',
+  realBalance: 10000,
+  demoBalance: 100000,
+  currency: 'THB',
   isLoggedIn: true,
 };
 
@@ -278,18 +298,79 @@ export function TradingProvider({ children }: { children: ReactNode }) {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   // TP / SL Targets
-  const [takeProfitTarget, setTakeProfitTarget] = useState(200000);
-  const [stopLossTarget, setStopLossTarget] = useState(200000);
+  const [takeProfitTarget, setTakeProfitTarget] = useState(50000);
+  const [stopLossTarget, setStopLossTarget] = useState(20000);
   const [targetAction, setTargetAction] = useState<'stop' | 'alert' | 'reset'>('stop');
 
-  const [trades, setTrades] = useState<Trade[]>([
-    { id: 92, amount: 2500, type: 'BUY', result: 'WIN', time: '11:55:00', aiConfidence: 78, aiSignal: 'BUY' },
-    { id: 91, amount: 2500, type: 'SELL', result: 'WIN', time: '11:54:00', aiConfidence: 85, aiSignal: 'SELL' },
-    { id: 90, amount: 2500, type: 'SELL', result: 'LOSE', time: '11:54:00', aiConfidence: 62, aiSignal: 'SELL' },
-  ]);
+  // Separate states for Real and Demo accounts
+  const [realCapital, setRealCapital] = useState<number>(10000);
+  const [demoCapital, setDemoCapital] = useState<number>(100000);
+  const [realProfit, setRealProfit] = useState<number>(0);
+  const [demoProfit, setDemoProfit] = useState<number>(0);
+  const [realTrades, setRealTrades] = useState<Trade[]>([]);
+  const [demoTrades, setDemoTrades] = useState<Trade[]>([]);
 
-  const capital = 818766;
-  const [profit, setProfit] = useState(-22430.40);
+  // LocalStorage Persistence
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const savedUser = localStorage.getItem('trading_user_account');
+      if (savedUser) {
+        const u = JSON.parse(savedUser);
+        setUser(u);
+        if (typeof u.realBalance === 'number') setRealCapital(u.realBalance);
+        if (typeof u.demoBalance === 'number') setDemoCapital(u.demoBalance);
+      }
+      const savedRealCap = localStorage.getItem('trading_real_capital');
+      if (savedRealCap) setRealCapital(Number(savedRealCap));
+      const savedRealProfit = localStorage.getItem('trading_real_profit');
+      if (savedRealProfit) setRealProfit(Number(savedRealProfit));
+      const savedRealTrades = localStorage.getItem('trading_real_trades');
+      if (savedRealTrades) setRealTrades(JSON.parse(savedRealTrades));
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem('trading_user_account', JSON.stringify(user));
+      localStorage.setItem('trading_real_capital', realCapital.toString());
+      localStorage.setItem('trading_real_profit', realProfit.toString());
+      localStorage.setItem('trading_real_trades', JSON.stringify(realTrades));
+    } catch {}
+  }, [user, realCapital, realProfit, realTrades]);
+
+  // Derived state based on active account type
+  const isReal = user.accountType === 'REAL';
+  const capital = isReal ? realCapital : demoCapital;
+  const profit = isReal ? realProfit : demoProfit;
+  const trades = isReal ? realTrades : demoTrades;
+
+  const setCapital = useCallback((v: number) => {
+    if (user.accountType === 'REAL') {
+      setRealCapital(v);
+      setUser(prev => ({ ...prev, realBalance: v }));
+    } else {
+      setDemoCapital(v);
+      setUser(prev => ({ ...prev, demoBalance: v }));
+    }
+  }, [user.accountType]);
+
+  const setProfit = useCallback((valOrFn: number | ((prev: number) => number)) => {
+    if (user.accountType === 'REAL') {
+      setRealProfit(prev => typeof valOrFn === 'function' ? valOrFn(prev) : valOrFn);
+    } else {
+      setDemoProfit(prev => typeof valOrFn === 'function' ? valOrFn(prev) : valOrFn);
+    }
+  }, [user.accountType]);
+
+  const setTrades = useCallback((valOrFn: React.SetStateAction<Trade[]>) => {
+    if (user.accountType === 'REAL') {
+      setRealTrades(valOrFn);
+    } else {
+      setDemoTrades(valOrFn);
+    }
+  }, [user.accountType]);
 
   // AI Signal
   const [aiSignal, setAiSignal] = useState<AISignal>({
@@ -371,17 +452,72 @@ export function TradingProvider({ children }: { children: ReactNode }) {
     addNotification('signal', `🔄 สลับเป็น ${type === 'REAL' ? 'บัญชีจริง (Real Account)' : 'บัญชีทดลอง (Practice/Demo)'}`);
   }, [addNotification]);
 
-  const login = useCallback((data: { email: string; broker: string; accountType: 'DEMO' | 'REAL'; accountNumber?: string }) => {
+  const syncBrokerBalance = useCallback((newBalance: number) => {
+    if (user.accountType === 'REAL') {
+      setRealCapital(newBalance);
+      setRealProfit(0);
+      setRealTrades([]);
+      setUser(prev => ({ ...prev, realBalance: newBalance }));
+    } else {
+      setDemoCapital(newBalance);
+      setDemoProfit(0);
+      setDemoTrades([]);
+      setUser(prev => ({ ...prev, demoBalance: newBalance }));
+    }
+    setConsecutiveLosses(0);
+    setIsCooldown(false);
+    setIsTiltDetected(false);
+    addNotification('signal', `🔄 ซิงค์ยอดเงินบัญชีจริงจากโบรกเกอร์: ฿${newBalance.toLocaleString()}`);
+  }, [user.accountType, addNotification]);
+
+  const resetSessionData = useCallback(() => {
+    if (user.accountType === 'REAL') {
+      setRealProfit(0);
+      setRealTrades([]);
+    } else {
+      setDemoProfit(0);
+      setDemoTrades([]);
+    }
+    setConsecutiveLosses(0);
+    setIsCooldown(false);
+    setIsTiltDetected(false);
+    addNotification('signal', '🧹 รีเซ็ตข้อมูลรอบเทรดเป็น 0 เรียบร้อย พร้อมเริ่มเทรดใหม่');
+  }, [user.accountType, addNotification]);
+
+  const login = useCallback((data: { 
+    email: string; 
+    broker: string; 
+    accountType: 'DEMO' | 'REAL'; 
+    accountNumber?: string;
+    server?: string;
+    balance?: number;
+  }) => {
+    const assignedBalance = data.balance !== undefined && !isNaN(data.balance)
+      ? data.balance
+      : (data.accountType === 'REAL' ? 10000 : 100000);
+
+    if (data.accountType === 'REAL') {
+      setRealCapital(assignedBalance);
+      setRealProfit(0);
+      setRealTrades([]);
+    } else {
+      setDemoCapital(assignedBalance);
+    }
+
     setUser({
       email: data.email,
       name: data.email.split('@')[0],
       broker: data.broker,
       accountType: data.accountType,
       accountNumber: data.accountNumber || `ACC-${Math.floor(1000000 + Math.random() * 9000000)}`,
+      server: data.server || (data.broker === 'Exness' ? 'Exness-Real19' : 'Live-Server'),
+      realBalance: data.accountType === 'REAL' ? assignedBalance : 10000,
+      demoBalance: data.accountType === 'DEMO' ? assignedBalance : 100000,
+      currency: 'THB',
       isLoggedIn: true,
     });
     setIsLoginModalOpen(false);
-    addNotification('signal', `🔐 เข้าสู่ระบบสำเร็จ: ${data.email} (${data.broker})`);
+    addNotification('signal', `🔐 เชื่อมต่อบัญชีสำเร็จ: ${data.email} (${data.broker}) ทุน: ฿${assignedBalance.toLocaleString()}`);
   }, [addNotification]);
 
   const logout = useCallback(() => {
@@ -649,7 +785,10 @@ export function TradingProvider({ children }: { children: ReactNode }) {
       isAutoTrade, setIsAutoTrade,
       isSettingsOpen, setIsSettingsOpen,
       settings, setSettings,
-      trades, capital, profit,
+      trades, setTrades,
+      capital, setCapital,
+      profit, setProfit,
+      syncBrokerBalance, resetSessionData,
       activePanel, setActivePanel,
       user, setUser,
       isLoginModalOpen, setIsLoginModalOpen,

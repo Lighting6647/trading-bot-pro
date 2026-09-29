@@ -13,7 +13,9 @@ export default function SidebarLeft() {
     trades, 
     setIsSettingsOpen,
     takeProfitTarget,
-    stopLossTarget
+    stopLossTarget,
+    user,
+    setIsLoginModalOpen
   } = useTrading();
 
   const [mounted, setMounted] = useState(false);
@@ -41,17 +43,41 @@ export default function SidebarLeft() {
   return (
     <div className="w-full md:w-64 flex-shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col h-auto md:h-full overflow-y-auto">
       {/* Header */}
-      <div className="p-4 border-b border-slate-800 flex items-center gap-2 text-green-500 font-bold">
-        <Activity size={20} className="animate-pulse" />
-        <span>TRADING BOT PRO v3.0</span>
+      <div className="p-3.5 border-b border-slate-800 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-green-500 font-bold text-sm">
+          <Activity size={18} className="animate-pulse" />
+          <span>TRADING BOT PRO</span>
+        </div>
+        <button 
+          onClick={() => setIsLoginModalOpen(true)}
+          className={`px-2 py-0.5 rounded text-[11px] font-semibold border flex items-center gap-1 transition-all ${
+            user.accountType === 'REAL'
+              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/20'
+              : 'bg-amber-500/10 text-amber-400 border-amber-500/40 hover:bg-amber-500/20'
+          }`}
+          title="คลิกเพื่อจัดการพอร์ตและเปลี่ยนประเภทบัญชี"
+        >
+          <span className={`w-1.5 h-1.5 rounded-full ${user.accountType === 'REAL' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`}></span>
+          {user.accountType === 'REAL' ? 'พอร์ตจริง' : 'DEMO'}
+        </button>
       </div>
 
       <div className="p-2 space-y-2">
         {/* เงินทุน & เป้าหมาย */}
         <div className="bg-slate-950/50 rounded-md border border-slate-800">
-          <div className="bg-slate-800/50 px-3 py-2 text-amber-400 font-semibold text-sm border-b border-slate-800 flex items-center gap-2">
-            <Wallet size={16} />
-            เงินทุน & เป้าหมาย
+          <div className="bg-slate-800/50 px-3 py-2 text-amber-400 font-semibold text-sm border-b border-slate-800 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Wallet size={16} />
+              <span>เงินทุน & เป้าหมาย</span>
+            </div>
+            {user.accountType === 'REAL' && (
+              <button 
+                onClick={() => setIsLoginModalOpen(true)}
+                className="text-[10px] text-blue-400 hover:text-blue-300 font-normal hover:underline"
+              >
+                แก้ไขทุน
+              </button>
+            )}
           </div>
           <div className="p-3 text-sm">
             <div className="grid grid-cols-2 gap-2 mb-3">

@@ -16,7 +16,11 @@ import {
   Lock, 
   ArrowRightLeft,
   Eye,
-  EyeOff
+  EyeOff,
+  Wallet,
+  RefreshCw,
+  RotateCcw,
+  Edit3
 } from 'lucide-react';
 import { useTrading } from '@/context/TradingContext';
 
@@ -37,20 +41,29 @@ export default function AccountModal() {
     login, 
     logout,
     capital,
+    setCapital,
     profit,
+    syncBrokerBalance,
+    resetSessionData,
     addNotification
   } = useTrading();
 
   const [activeTab, setActiveTab] = useState<'status' | 'login'>(user.isLoggedIn ? 'status' : 'login');
   
   // Login Form State
-  const [email, setEmail] = useState(user.email || '');
+  const [email, setEmail] = useState(user.email || 'lighting6647@gmail.com');
   const [password, setPassword] = useState('••••••••••••');
   const [showPassword, setShowPassword] = useState(false);
-  const [broker, setBroker] = useState(user.broker || 'IQ Option');
-  const [targetType, setTargetType] = useState<'DEMO' | 'REAL'>(user.accountType || 'DEMO');
+  const [broker, setBroker] = useState(user.broker || 'Exness');
+  const [server, setServer] = useState(user.server || 'Exness-Real19');
+  const [targetType, setTargetType] = useState<'DEMO' | 'REAL'>(user.accountType || 'REAL');
+  const [customBalance, setCustomBalance] = useState<string>(capital ? capital.toString() : '10000');
   const [apiKey, setApiKey] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
+
+  // Status Tab Balance Editor
+  const [isEditingBalance, setIsEditingBalance] = useState(false);
+  const [editBalanceInput, setEditBalanceInput] = useState(capital.toString());
 
   if (!isLoginModalOpen) return null;
 
@@ -63,26 +76,42 @@ export default function AccountModal() {
 
     setIsConnecting(true);
     setTimeout(() => {
+      const parsedBal = parseFloat(customBalance.replace(/,/g, ''));
       login({
         email: email.trim(),
         broker,
         accountType: targetType,
         accountNumber: `ACC-${Math.floor(1000000 + Math.random() * 9000000)}`,
+        server: server.trim() || 'Real-Server',
+        balance: !isNaN(parsedBal) && parsedBal > 0 ? parsedBal : (targetType === 'REAL' ? 10000 : 100000),
       });
       setIsConnecting(false);
       setActiveTab('status');
     }, 700);
   };
 
+  const handleSaveBalance = () => {
+    const parsed = parseFloat(editBalanceInput.replace(/,/g, ''));
+    if (!isNaN(parsed) && parsed >= 0) {
+      setCapital(parsed);
+      setIsEditingBalance(false);
+      addNotification('signal', `💾 บันทึกยอดเงินทุนจริงเรียบร้อย: ฿${parsed.toLocaleString()}`);
+    }
+  };
+
   const handleQuickDemo = () => {
     setEmail('center.art@mss.com');
     setBroker('IQ Option');
     setTargetType('DEMO');
+    setServer('Demo-Server');
+    setCustomBalance('100000');
     login({
       email: 'center.art@mss.com',
       broker: 'IQ Option',
       accountType: 'DEMO',
       accountNumber: 'ACC-8839210',
+      server: 'Demo-Server',
+      balance: 100000,
     });
     setActiveTab('status');
   };
@@ -170,10 +199,40 @@ export default function AccountModal() {
                 {/* Balance Stats */}
                 <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-800/80">
                   <div>
-                    <div className="text-[10px] text-slate-400">ยอดเงินในพอร์ต (Balance)</div>
-                    <div className="text-base font-bold font-mono text-white mt-0.5">
-                      {totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ฿
+                    <div className="text-[10px] text-slate-400 flex items-center justify-between">
+                      <span>ทุนในพอร์ต (Capital)</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsEditingBalance(!isEditingBalance);
+                          setEditBalanceInput(capital.toString());
+                        }}
+                        className="text-[10px] text-blue-400 hover:text-blue-300 underline cursor-pointer"
+                      >
+                        {isEditingBalance ? 'ปิด' : 'แก้ไขทุน'}
+                      </button>
                     </div>
+                    {isEditingBalance ? (
+                      <div className="flex items-center gap-1 mt-1">
+                        <input
+                          type="number"
+                          value={editBalanceInput}
+                          onChange={(e) => setEditBalanceInput(e.target.value)}
+                          className="w-24 bg-slate-950 border border-blue-500 rounded px-1.5 py-0.5 text-xs text-white font-mono outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleSaveBalance}
+                          className="px-2 py-0.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-[10px] font-bold cursor-pointer"
+                        >
+                          บันทึก
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="text-base font-bold font-mono text-white mt-0.5">
+                        {capital.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ฿
+                      </div>
+                    )}
                   </div>
                   <div>
                     <div className="text-[10px] text-slate-400">กำไร/ขาดทุนรอบนี้</div>
@@ -182,6 +241,39 @@ export default function AccountModal() {
                     </div>
                   </div>
                 </div>
+
+                {/* Total Equity Summary */}
+                <div className="mt-2 pt-2 border-t border-slate-800/60 flex justify-between items-center text-xs">
+                  <span className="text-slate-400 font-medium">ยอดเงินสุทธิคงเหลือ (Total Equity):</span>
+                  <span className="font-mono font-bold text-emerald-400 text-sm">
+                    {totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ฿
+                  </span>
+                </div>
+              </div>
+
+              {/* Real Balance Sync & Reset Action Toolbar */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const sampleSync = user.accountType === 'REAL' ? (capital || 10000) : 100000;
+                    syncBrokerBalance(sampleSync);
+                  }}
+                  className="py-2 px-3 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  title="ดึงยอดเงินและสถานะล่าสุดจากโบรกเกอร์"
+                >
+                  <RefreshCw size={13} />
+                  <span>ซิงค์พอร์ต {user.broker}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={resetSessionData}
+                  className="py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  title="ล้างสถิติที่เคยเทรดออก เริ่มต้นรอบใหม่ 0 บาท"
+                >
+                  <RotateCcw size={13} />
+                  <span>รีเซ็ตสถิติ 0 ฿</span>
+                </button>
               </div>
 
               {/* Account Type Switcher */}
@@ -356,6 +448,36 @@ export default function AccountModal() {
                   >
                     {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
+                </div>
+              </div>
+
+              {/* Server & Initial Capital Inputs */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <label className="text-slate-300 font-semibold flex items-center gap-1">
+                    <Server size={12} className="text-blue-400" />
+                    <span>Server โบรกเกอร์</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="เช่น Exness-Real19"
+                    value={server}
+                    onChange={(e) => setServer(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 focus:border-blue-500 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none font-mono"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-slate-300 font-semibold flex items-center gap-1">
+                    <Wallet size={12} className="text-amber-400" />
+                    <span>ทุนในพอร์ตจริง (฿)</span>
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="เช่น 10000"
+                    value={customBalance}
+                    onChange={(e) => setCustomBalance(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 focus:border-blue-500 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none font-mono"
+                  />
                 </div>
               </div>
 

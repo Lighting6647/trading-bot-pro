@@ -1,0 +1,684 @@
+"use client";
+
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
+
+// ============ TYPES ============
+
+export type Trade = {
+  id: number;
+  amount: number;
+  type: 'BUY' | 'SELL';
+  result: 'WIN' | 'LOSE';
+  time: string;
+  note?: string;
+  tags?: string[];
+  aiConfidence?: number;
+  aiSignal?: 'BUY' | 'SELL' | 'HOLD';
+};
+
+export type Settings = {
+  strategy: string;
+  startAmount: number;
+  maxAmount: number;
+  steps: number;
+};
+
+export type Notification = {
+  id: number;
+  type: 'win' | 'lose' | 'target' | 'signal' | 'risk' | 'achievement';
+  message: string;
+  time: string;
+  read: boolean;
+};
+
+export type Achievement = {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  unlocked: boolean;
+  unlockedAt?: string;
+  progress: number;
+  target: number;
+};
+
+export type JournalEntry = {
+  id: number;
+  tradeId: number;
+  note: string;
+  tags: string[];
+  createdAt: string;
+};
+
+export type CopyTrader = {
+  id: string;
+  name: string;
+  avatar: string;
+  winRate: number;
+  totalProfit: number;
+  followers: number;
+  trades: number;
+  isFollowing: boolean;
+};
+
+export type AISignal = {
+  direction: 'BUY' | 'SELL' | 'HOLD';
+  confidence: number;
+  reason: string;
+  timeframe: string;
+  timestamp: string;
+};
+
+export type HeatmapItem = {
+  symbol: string;
+  change: number;
+  volume: number;
+  price: number;
+};
+
+export type TimeframeAnalysis = {
+  timeframe: string;
+  trend: 'UP' | 'DOWN' | 'SIDEWAYS';
+  strength: number;
+};
+
+export type ChatMessage = {
+  id: number;
+  role: 'user' | 'ai';
+  content: string;
+  timestamp: string;
+};
+
+export type BacktestResult = {
+  totalTrades: number;
+  wins: number;
+  losses: number;
+  netProfit: number;
+  maxDrawdown: number;
+  sharpeRatio: number;
+  recoveryFactor: number;
+  equityCurve: number[];
+};
+
+export type UserAccount = {
+  email: string;
+  name: string;
+  broker: string;
+  accountType: 'DEMO' | 'REAL';
+  accountNumber: string;
+  isLoggedIn: boolean;
+};
+
+// ============ CONTEXT TYPE ============
+
+type TradingContextType = {
+  // Core
+  isRunning: boolean;
+  setIsRunning: (v: boolean) => void;
+  isAutoTrade: boolean;
+  setIsAutoTrade: (v: boolean) => void;
+  isSettingsOpen: boolean;
+  setIsSettingsOpen: (v: boolean) => void;
+  settings: Settings;
+  setSettings: (s: Settings) => void;
+  trades: Trade[];
+  capital: number;
+  profit: number;
+  activePanel: string;
+  setActivePanel: (v: string) => void;
+
+  // User Account & Login
+  user: UserAccount;
+  setUser: (u: UserAccount) => void;
+  isLoginModalOpen: boolean;
+  setIsLoginModalOpen: (v: boolean) => void;
+  switchAccountType: (type: 'DEMO' | 'REAL') => void;
+  login: (data: { email: string; broker: string; accountType: 'DEMO' | 'REAL'; accountNumber?: string }) => void;
+  logout: () => void;
+
+  // Language
+  language: 'TH' | 'EN';
+  setLanguage: (lang: 'TH' | 'EN') => void;
+
+  // Targets (TP / SL)
+  takeProfitTarget: number;
+  setTakeProfitTarget: (v: number) => void;
+  stopLossTarget: number;
+  setStopLossTarget: (v: number) => void;
+  targetAction: 'stop' | 'alert' | 'reset';
+  setTargetAction: (v: 'stop' | 'alert' | 'reset') => void;
+
+  // AI Signal
+  aiSignal: AISignal;
+  aiAccuracy: number;
+
+  // Risk Manager
+  consecutiveLosses: number;
+  isCooldown: boolean;
+  cooldownSeconds: number;
+  dailyLossLimit: number;
+  setDailyLossLimit: (v: number) => void;
+  isTiltDetected: boolean;
+
+  // Notifications
+  notifications: Notification[];
+  addNotification: (type: Notification['type'], message: string) => void;
+  markNotificationRead: (id: number) => void;
+  markAllNotificationsRead: () => void;
+  clearNotifications: () => void;
+
+  // Achievements
+  achievements: Achievement[];
+  xp: number;
+  level: number;
+  streak: number;
+  addXp: (amount: number) => void;
+
+  // Journal
+  journalEntries: JournalEntry[];
+  addJournalEntry: (tradeId: number, note: string, tags: string[]) => void;
+
+  // Copy Trade
+  copyTraders: CopyTrader[];
+  followTrader: (id: string, options?: { copyRatio?: number; stopLossPercent?: number }) => void;
+  unfollowTrader: (id: string) => void;
+
+  // Heatmap
+  heatmapData: HeatmapItem[];
+
+  // Multi-timeframe
+  timeframeAnalysis: TimeframeAnalysis[];
+
+  // Chat
+  chatMessages: ChatMessage[];
+  sendChatMessage: (msg: string) => void;
+
+  // Backtest
+  backtestResult: BacktestResult | null;
+  runBacktest: (days: number) => void;
+  isBacktesting: boolean;
+};
+
+// ============ DEFAULTS & MOCK DATA ============
+
+const defaultSettings: Settings = {
+  strategy: 'Anti-Martingale',
+  startAmount: 40,
+  maxAmount: 20000,
+  steps: 4,
+};
+
+const defaultAchievements: Achievement[] = [
+  { id: 'first_trade', title: 'เทรดไม้แรก', description: 'เปิดออเดอร์ครั้งแรกสำเร็จ', icon: '🎯', unlocked: true, unlockedAt: '2026-09-28', progress: 1, target: 1 },
+  { id: 'win_streak_5', title: 'ชนะ 5 ติด', description: 'ชนะติดต่อกัน 5 ไม้', icon: '🔥', unlocked: false, progress: 0, target: 5 },
+  { id: 'win_streak_10', title: 'ชนะ 10 ติด', description: 'ชนะติดต่อกัน 10 ไม้', icon: '💎', unlocked: false, progress: 0, target: 10 },
+  { id: 'profit_10k', title: 'กำไร 10K', description: 'ทำกำไรสะสม 10,000 บาท', icon: '💰', unlocked: false, progress: 0, target: 10000 },
+  { id: 'profit_100k', title: 'กำไร 100K', description: 'ทำกำไรสะสม 100,000 บาท', icon: '🏆', unlocked: false, progress: 0, target: 100000 },
+  { id: 'trades_100', title: 'เทรดครบ 100', description: 'เปิดออเดอร์ครบ 100 ไม้', icon: '📊', unlocked: false, progress: 0, target: 100 },
+  { id: 'discipline', title: 'มีวินัย', description: 'เทรดตามแผนครบ 7 วันติด', icon: '🛡️', unlocked: false, progress: 0, target: 7 },
+  { id: 'winrate_70', title: 'Win Rate 70%', description: 'Win Rate เกิน 70% ใน 50 ไม้', icon: '⭐', unlocked: false, progress: 0, target: 70 },
+];
+
+const defaultCopyTraders: CopyTrader[] = [
+  { id: 'tr1', name: 'TraderKing_TH', avatar: '👑', winRate: 72.5, totalProfit: 1250000, followers: 1842, trades: 3200, isFollowing: false },
+  { id: 'tr2', name: 'GoldMaster99', avatar: '🥇', winRate: 68.3, totalProfit: 890000, followers: 956, trades: 2100, isFollowing: false },
+  { id: 'tr3', name: 'CryptoQueen', avatar: '👸', winRate: 65.1, totalProfit: 720000, followers: 2300, trades: 4500, isFollowing: false },
+  { id: 'tr4', name: 'ScalpKing', avatar: '⚡', winRate: 71.8, totalProfit: 560000, followers: 780, trades: 8900, isFollowing: false },
+  { id: 'tr5', name: 'BotWizard', avatar: '🤖', winRate: 63.4, totalProfit: 430000, followers: 1200, trades: 5600, isFollowing: false },
+];
+
+const defaultHeatmap: HeatmapItem[] = [
+  { symbol: 'SP500', change: 1.2, volume: 85000, price: 5890.50 },
+  { symbol: 'GOLD', change: -0.8, volume: 62000, price: 2650.30 },
+  { symbol: 'EUR/USD', change: 0.3, volume: 45000, price: 1.0856 },
+  { symbol: 'BTC/USD', change: 3.5, volume: 120000, price: 98500 },
+  { symbol: 'ETH/USD', change: 2.1, volume: 78000, price: 4200 },
+  { symbol: 'GBP/USD', change: -0.5, volume: 32000, price: 1.3420 },
+  { symbol: 'USD/JPY', change: 0.7, volume: 55000, price: 149.85 },
+  { symbol: 'NASDAQ', change: 1.8, volume: 95000, price: 20150 },
+  { symbol: 'OIL', change: -1.2, volume: 41000, price: 71.20 },
+  { symbol: 'SILVER', change: 0.9, volume: 28000, price: 31.50 },
+  { symbol: 'AUD/USD', change: -0.3, volume: 22000, price: 0.6420 },
+  { symbol: 'NZD/USD', change: 0.1, volume: 15000, price: 0.5980 },
+];
+
+const defaultTimeframes: TimeframeAnalysis[] = [
+  { timeframe: '1m', trend: 'UP', strength: 65 },
+  { timeframe: '5m', trend: 'UP', strength: 72 },
+  { timeframe: '15m', trend: 'DOWN', strength: 45 },
+  { timeframe: '1h', trend: 'UP', strength: 80 },
+  { timeframe: '4h', trend: 'SIDEWAYS', strength: 50 },
+  { timeframe: '1D', trend: 'UP', strength: 88 },
+];
+
+const defaultUser: UserAccount = {
+  email: 'center.art@mss.com',
+  name: 'Center Art Pro Trader',
+  broker: 'IQ Option',
+  accountType: 'DEMO',
+  accountNumber: 'ACC-8839210',
+  isLoggedIn: true,
+};
+
+// ============ CONTEXT ============
+
+const TradingContext = createContext<TradingContextType | undefined>(undefined);
+
+export function TradingProvider({ children }: { children: ReactNode }) {
+  // Core States
+  const [isRunning, setIsRunning] = useState(false);
+  const [isAutoTrade, setIsAutoTrade] = useState(true);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settings, setSettings] = useState<Settings>(defaultSettings);
+  const [activePanel, setActivePanel] = useState('แดชบอร์ด');
+  const [language, setLanguage] = useState<'TH' | 'EN'>('TH');
+
+  // User Account & Login
+  const [user, setUser] = useState<UserAccount>(defaultUser);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+
+  // TP / SL Targets
+  const [takeProfitTarget, setTakeProfitTarget] = useState(200000);
+  const [stopLossTarget, setStopLossTarget] = useState(200000);
+  const [targetAction, setTargetAction] = useState<'stop' | 'alert' | 'reset'>('stop');
+
+  const [trades, setTrades] = useState<Trade[]>([
+    { id: 92, amount: 2500, type: 'BUY', result: 'WIN', time: '11:55:00', aiConfidence: 78, aiSignal: 'BUY' },
+    { id: 91, amount: 2500, type: 'SELL', result: 'WIN', time: '11:54:00', aiConfidence: 85, aiSignal: 'SELL' },
+    { id: 90, amount: 2500, type: 'SELL', result: 'LOSE', time: '11:54:00', aiConfidence: 62, aiSignal: 'SELL' },
+  ]);
+
+  const capital = 818766;
+  const [profit, setProfit] = useState(-22430.40);
+
+  // AI Signal
+  const [aiSignal, setAiSignal] = useState<AISignal>({
+    direction: 'BUY',
+    confidence: 78,
+    reason: 'RSI oversold + MACD bullish crossover + Volume spike detected',
+    timeframe: '5m',
+    timestamp: '2026-09-29T11:55:00.000Z',
+  });
+  const [aiAccuracy] = useState(73.5);
+
+  // Risk Manager
+  const [consecutiveLosses, setConsecutiveLosses] = useState(0);
+  const [isCooldown, setIsCooldown] = useState(false);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
+  const [dailyLossLimit, setDailyLossLimit] = useState(50000);
+  const [isTiltDetected, setIsTiltDetected] = useState(false);
+
+  // Notifications
+  const [notifications, setNotifications] = useState<Notification[]>([
+    { id: 1, type: 'signal', message: 'AI ตรวจพบสัญญาณ BUY แรง (85% confidence)', time: '11:55:00', read: false },
+    { id: 2, type: 'win', message: 'ชนะ! +2,125 บาท (ไม้ที่ 92)', time: '11:55:00', read: true },
+  ]);
+
+  // Achievements
+  const [achievements] = useState<Achievement[]>(defaultAchievements);
+  const [xp, setXp] = useState(1250);
+  const [level, setLevel] = useState(5);
+  const [streak] = useState(3);
+
+  // Journal
+  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
+
+  // Copy Trade
+  const [copyTraders, setCopyTraders] = useState<CopyTrader[]>(defaultCopyTraders);
+
+  // Heatmap
+  const [heatmapData, setHeatmapData] = useState<HeatmapItem[]>(defaultHeatmap);
+
+  // Multi-timeframe
+  const [timeframeAnalysis, setTimeframeAnalysis] = useState<TimeframeAnalysis[]>(defaultTimeframes);
+
+  // Chat
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
+    { id: 1, role: 'ai', content: 'สวัสดีครับ! ผมคือ AI Assistant ของ Trading Bot Pro พร้อมช่วยวิเคราะห์การเทรดให้ครับ 🤖', timestamp: '2026-09-29T11:55:00.000Z' },
+  ]);
+
+  // Backtest
+  const [backtestResult, setBacktestResult] = useState<BacktestResult | null>(null);
+  const [isBacktesting, setIsBacktesting] = useState(false);
+
+  // Ref tracking for simulation stability
+  const tradesRef = useRef(trades);
+  tradesRef.current = trades;
+  const profitRef = useRef(profit);
+  profitRef.current = profit;
+  const levelRef = useRef(level);
+  levelRef.current = level;
+  const xpRef = useRef(xp);
+  xpRef.current = xp;
+  const consecutiveLossesRef = useRef(consecutiveLosses);
+  consecutiveLossesRef.current = consecutiveLosses;
+
+  // ============ FUNCTIONS ============
+
+  const addNotification = useCallback((type: Notification['type'], message: string) => {
+    const uniqueId = Date.now() + Math.floor(Math.random() * 100000);
+    setNotifications(prev => [{
+      id: uniqueId,
+      type,
+      message,
+      time: new Date().toLocaleTimeString('en-US', { hour12: false }),
+      read: false,
+    }, ...prev].slice(0, 50));
+  }, []);
+
+  const switchAccountType = useCallback((type: 'DEMO' | 'REAL') => {
+    setUser(prev => ({ ...prev, accountType: type }));
+    addNotification('signal', `🔄 สลับเป็น ${type === 'REAL' ? 'บัญชีจริง (Real Account)' : 'บัญชีทดลอง (Practice/Demo)'}`);
+  }, [addNotification]);
+
+  const login = useCallback((data: { email: string; broker: string; accountType: 'DEMO' | 'REAL'; accountNumber?: string }) => {
+    setUser({
+      email: data.email,
+      name: data.email.split('@')[0],
+      broker: data.broker,
+      accountType: data.accountType,
+      accountNumber: data.accountNumber || `ACC-${Math.floor(1000000 + Math.random() * 9000000)}`,
+      isLoggedIn: true,
+    });
+    setIsLoginModalOpen(false);
+    addNotification('signal', `🔐 เข้าสู่ระบบสำเร็จ: ${data.email} (${data.broker})`);
+  }, [addNotification]);
+
+  const logout = useCallback(() => {
+    setUser(prev => ({ ...prev, isLoggedIn: false }));
+    addNotification('signal', '🚪 ออกจากระบบเรียบร้อยแล้ว');
+  }, [addNotification]);
+
+  const markNotificationRead = useCallback((id: number) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+  }, []);
+
+  const markAllNotificationsRead = useCallback(() => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  }, []);
+
+  const clearNotifications = useCallback(() => {
+    setNotifications([]);
+  }, []);
+
+  const addXp = useCallback((amount: number) => {
+    setXp(prev => {
+      const nextXp = prev + amount;
+      const curLevel = levelRef.current;
+      const targetXp = curLevel * 500;
+      if (nextXp >= targetXp) {
+        setLevel(l => l + 1);
+        addNotification('achievement', `🎉 Level Up! คุณขึ้นสู่ Level ${curLevel + 1}!`);
+      }
+      return nextXp;
+    });
+  }, [addNotification]);
+
+  const addJournalEntry = useCallback((tradeId: number, note: string, tags: string[]) => {
+    setJournalEntries(prev => [{
+      id: Date.now() + Math.floor(Math.random() * 1000),
+      tradeId,
+      note,
+      tags,
+      createdAt: new Date().toISOString(),
+    }, ...prev]);
+  }, []);
+
+  const followTrader = useCallback((id: string, options?: { copyRatio?: number; stopLossPercent?: number }) => {
+    setCopyTraders(prev => prev.map(t => t.id === id ? { ...t, isFollowing: true, followers: t.followers + 1 } : t));
+    const traderName = copyTraders.find(t => t.id === id)?.name || 'Master Trader';
+    const ratioText = options?.copyRatio ? ` (สัดส่วน ${options.copyRatio}%)` : '';
+    addNotification('signal', `เริ่ม Copy Trade จาก ${traderName}${ratioText}`);
+  }, [copyTraders, addNotification]);
+
+  const unfollowTrader = useCallback((id: string) => {
+    setCopyTraders(prev => prev.map(t => t.id === id ? { ...t, isFollowing: false, followers: Math.max(0, t.followers - 1) } : t));
+    const traderName = copyTraders.find(t => t.id === id)?.name || 'Master Trader';
+    addNotification('signal', `ยกเลิกการติดตาม ${traderName}`);
+  }, [copyTraders, addNotification]);
+
+  const sendChatMessage = useCallback((msg: string) => {
+    const userMsg: ChatMessage = {
+      id: Date.now(),
+      role: 'user',
+      content: msg,
+      timestamp: new Date().toISOString(),
+    };
+    setChatMessages(prev => [...prev, userMsg]);
+
+    // AI response simulation
+    setTimeout(() => {
+      let response = '';
+      const lowerMsg = msg.toLowerCase();
+      if (lowerMsg.includes('วิเคราะห์') || lowerMsg.includes('กราฟ')) {
+        response = `📊 วิเคราะห์ตลาดล่าสุด:\n\n• SP500 กำลังอยู่ในแนวโน้มขาขึ้น RSI อยู่ที่ 62 (ยังไม่ Overbought)\n• MACD เพิ่งตัดขึ้นเหนือ Signal Line → สัญญาณ Bullish\n• Volume สูงกว่าค่าเฉลี่ย 20 วัน 15%\n• แนวรับ: 5,850 | แนวต้าน: 5,920\n\n💡 แนะนำ: รอจังหวะ Pullback เข้า BUY ที่แนวรับ 5,860-5,870`;
+      } else if (lowerMsg.includes('สรุป') || lowerMsg.includes('วันนี้')) {
+        const curTrades = tradesRef.current;
+        const curProfit = profitRef.current;
+        const wins = curTrades.filter(t => t.result === 'WIN').length;
+        const total = curTrades.length;
+        response = `📋 สรุปผลเทรดวันนี้:\n\n• ออเดอร์ทั้งหมด: ${total} ไม้\n• ชนะ: ${wins} | แพ้: ${total - wins}\n• Win Rate: ${total > 0 ? ((wins/total)*100).toFixed(1) : 0}%\n• กำไร/ขาดทุน: ${curProfit > 0 ? '+' : ''}${curProfit.toLocaleString()} บาท\n\n${curProfit >= 0 ? '✅ วันนี้ทำได้ดีครับ!' : '⚠️ วันนี้ขาดทุนอยู่ ควรระวังการเทรดครับ'}`;
+      } else if (lowerMsg.includes('ควร') || lowerMsg.includes('เข้า')) {
+        response = `🤖 AI วิเคราะห์สัญญาณปัจจุบัน:\n\n• สัญญาณ: ${aiSignal.direction} (ความมั่นใจ ${aiSignal.confidence}%)\n• เหตุผล: ${aiSignal.reason}\n• Timeframe: ${aiSignal.timeframe}\n\n${aiSignal.confidence >= 75 ? '✅ สัญญาณค่อนข้างแรง แนะนำเข้าได้' : '⚠️ สัญญาณยังไม่แข็งแรงมาก ควรรอจังหวะที่ดีกว่า'}`;
+      } else {
+        response = `ผมเข้าใจคำถามของคุณครับ 🤖\n\nคุณสามารถถามผมได้เกี่ยวกับ:\n• "วิเคราะห์กราฟ" - วิเคราะห์ตลาดปัจจุบัน\n• "สรุปวันนี้" - สรุปผลเทรดวันนี้\n• "ควรเข้าไหม" - ดูสัญญาณ AI ล่าสุด\n\nลองถามมาได้เลยครับ!`;
+      }
+      const aiMsg: ChatMessage = {
+        id: Date.now() + 1,
+        role: 'ai',
+        content: response,
+        timestamp: new Date().toISOString(),
+      };
+      setChatMessages(prev => [...prev, aiMsg]);
+    }, 1000);
+  }, [aiSignal]);
+
+  const runBacktest = useCallback((days: number) => {
+    setIsBacktesting(true);
+    setTimeout(() => {
+      const totalTrades = days * 15;
+      const winRate = 0.48 + Math.random() * 0.2;
+      const wins = Math.round(totalTrades * winRate);
+      const losses = totalTrades - wins;
+      const avgWin = settings.startAmount * 0.85;
+      const avgLoss = settings.startAmount;
+      const netProfit = (wins * avgWin) - (losses * avgLoss);
+
+      const equityCurve: number[] = [];
+      let equity = 0;
+      let maxEquity = 0;
+      let maxDD = 0;
+      for (let i = 0; i < totalTrades; i++) {
+        const isWin = Math.random() < winRate;
+        equity += isWin ? avgWin : -avgLoss;
+        equityCurve.push(equity);
+        if (equity > maxEquity) maxEquity = equity;
+        const dd = maxEquity - equity;
+        if (dd > maxDD) maxDD = dd;
+      }
+
+      setBacktestResult({
+        totalTrades,
+        wins,
+        losses,
+        netProfit,
+        maxDrawdown: Math.max(0, maxDD),
+        sharpeRatio: parseFloat((netProfit / (maxDD || 1) * 0.5).toFixed(2)),
+        recoveryFactor: parseFloat((netProfit / (maxDD || 1)).toFixed(2)),
+        equityCurve,
+      });
+      setIsBacktesting(false);
+      addNotification('signal', `Backtest เสร็จสิ้น: ${totalTrades} ออเดอร์ | กำไร ${netProfit > 0 ? '+' : ''}${netProfit.toFixed(0)}`);
+    }, 1500);
+  }, [settings.startAmount, addNotification]);
+
+  // ============ SIMULATION ============
+
+  useEffect(() => {
+    if (!isRunning || !isAutoTrade || isCooldown) return;
+
+    const interval = setInterval(() => {
+      // AI signal update
+      const newConfidence = 50 + Math.random() * 45;
+      const newDirection = newConfidence > 70 ? (Math.random() > 0.5 ? 'BUY' : 'SELL') : 'HOLD';
+      const reasons = [
+        'RSI oversold + MACD bullish crossover',
+        'Bollinger Band squeeze breakout',
+        'Volume spike + Price action confirmation',
+        'Moving Average golden cross detected',
+        'Support level bounce + Bullish divergence',
+        'Trend continuation pattern detected',
+      ];
+      setAiSignal({
+        direction: newDirection as 'BUY' | 'SELL' | 'HOLD',
+        confidence: Math.round(newConfidence),
+        reason: reasons[Math.floor(Math.random() * reasons.length)],
+        timeframe: ['1m', '5m', '15m'][Math.floor(Math.random() * 3)],
+        timestamp: new Date().toISOString(),
+      });
+
+      if (newDirection === 'HOLD') return;
+
+      const isWin = Math.random() > 0.47;
+      const type = newDirection as 'BUY' | 'SELL';
+      const prevTrades = tradesRef.current;
+      const nextId = prevTrades.length > 0 ? prevTrades[0].id + 1 : 1;
+
+      const newTrade: Trade = {
+        id: nextId,
+        amount: settings.startAmount,
+        type,
+        result: isWin ? 'WIN' : 'LOSE',
+        time: new Date().toLocaleTimeString('en-US', { hour12: false }),
+        aiConfidence: Math.round(newConfidence),
+        aiSignal: newDirection as 'BUY' | 'SELL',
+      };
+      
+      setTrades(prev => [newTrade, ...prev].slice(0, 100));
+      const pnl = isWin ? settings.startAmount * 0.85 : -settings.startAmount;
+      const newTotalProfit = profitRef.current + pnl;
+      setProfit(newTotalProfit);
+
+      // Handle win/loss consequences
+      if (isWin) {
+        addNotification('win', `ชนะ! +${(settings.startAmount * 0.85).toFixed(0)} บาท (ไม้ที่ ${nextId})`);
+        setConsecutiveLosses(0);
+        addXp(50);
+      } else {
+        addNotification('lose', `แพ้ -${settings.startAmount} บาท (ไม้ที่ ${nextId})`);
+        const nextLossCount = consecutiveLossesRef.current + 1;
+        setConsecutiveLosses(nextLossCount);
+
+        if (nextLossCount >= 5) {
+          setIsTiltDetected(true);
+          addNotification('risk', '⚠️ ตรวจพบ Tilt Mode! แนะนำให้หยุดพักเทรดเพื่อควบคุมอารมณ์');
+        }
+
+        if (nextLossCount >= 3) {
+          setIsCooldown(true);
+          setCooldownSeconds(300);
+          addNotification('risk', '🛑 แพ้ 3 ไม้ติด → ระบบเปิด Cool-down พักเทรด 5 นาที');
+        }
+      }
+
+      // Check TP / SL Target limits
+      if (newTotalProfit >= takeProfitTarget) {
+        addNotification('target', `🎯 กำไรถึงเป้า TP Target (+${takeProfitTarget.toLocaleString()} ฿) เรียบร้อยแล้ว!`);
+        if (targetAction === 'stop') {
+          setIsRunning(false);
+          addNotification('risk', '🛑 ระบบหยุดเทรดอัตโนมัติตามเงื่อนไขเป้ากำไร');
+        }
+      } else if (newTotalProfit <= -stopLossTarget) {
+        addNotification('target', `⚠️ ขาดทุนถึงจุดตัด SL Target (-${stopLossTarget.toLocaleString()} ฿)`);
+        if (targetAction === 'stop') {
+          setIsRunning(false);
+          addNotification('risk', '🛑 ระบบหยุดเทรดอัตโนมัติตามเงื่อนไขตัดขาดทุน');
+        }
+      }
+
+      // Daily Loss Limit check
+      if (newTotalProfit <= -dailyLossLimit) {
+        setIsRunning(false);
+        addNotification('risk', `🚫 ขาดทุนเกิน Daily Loss Limit (${dailyLossLimit.toLocaleString()}) → สั่งหยุดระบบ`);
+      }
+
+      // Base XP per trade
+      addXp(10);
+
+      // Update heatmap randomly
+      setHeatmapData(prev => prev.map(item => ({
+        ...item,
+        change: item.change + (Math.random() - 0.5) * 0.3,
+        price: item.price * (1 + (Math.random() - 0.5) * 0.002),
+      })));
+
+      // Update timeframes
+      setTimeframeAnalysis(prev => prev.map(tf => ({
+        ...tf,
+        strength: Math.max(10, Math.min(95, tf.strength + (Math.random() - 0.5) * 10)),
+        trend: Math.random() > 0.8 ? (['UP', 'DOWN', 'SIDEWAYS'] as const)[Math.floor(Math.random() * 3)] : tf.trend,
+      })));
+
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [isRunning, isAutoTrade, isCooldown, settings.startAmount, dailyLossLimit, takeProfitTarget, stopLossTarget, targetAction, addNotification, addXp]);
+
+  // Cooldown countdown timer
+  useEffect(() => {
+    if (!isCooldown) return;
+
+    const timer = setInterval(() => {
+      setCooldownSeconds(prev => {
+        if (prev <= 1) {
+          setIsCooldown(false);
+          setIsTiltDetected(false);
+          addNotification('signal', '✅ Cool-down สิ้นสุดแล้ว กลับมาพร้อมเทรดตามแผน');
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isCooldown, addNotification]);
+
+  return (
+    <TradingContext.Provider value={{
+      isRunning, setIsRunning,
+      isAutoTrade, setIsAutoTrade,
+      isSettingsOpen, setIsSettingsOpen,
+      settings, setSettings,
+      trades, capital, profit,
+      activePanel, setActivePanel,
+      user, setUser,
+      isLoginModalOpen, setIsLoginModalOpen,
+      switchAccountType, login, logout,
+      language, setLanguage,
+      takeProfitTarget, setTakeProfitTarget,
+      stopLossTarget, setStopLossTarget,
+      targetAction, setTargetAction,
+      aiSignal, aiAccuracy,
+      consecutiveLosses, isCooldown, cooldownSeconds,
+      dailyLossLimit, setDailyLossLimit, isTiltDetected,
+      notifications, addNotification, markNotificationRead, markAllNotificationsRead, clearNotifications,
+      achievements, xp, level, streak, addXp,
+      journalEntries, addJournalEntry,
+      copyTraders, followTrader, unfollowTrader,
+      heatmapData,
+      timeframeAnalysis,
+      chatMessages, sendChatMessage,
+      backtestResult, runBacktest, isBacktesting,
+    }}>
+      {children}
+    </TradingContext.Provider>
+  );
+}
+
+export function useTrading() {
+  const context = useContext(TradingContext);
+  if (context === undefined) {
+    throw new Error('useTrading must be used within a TradingProvider');
+  }
+  return context;
+}

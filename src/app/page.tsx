@@ -1,0 +1,235 @@
+"use client";
+
+import React, { useState } from "react";
+import { useTrading } from "@/context/TradingContext";
+import SidebarLeft from "@/components/SidebarLeft";
+import SidebarRight from "@/components/SidebarRight";
+import MainDashboard from "@/components/MainDashboard";
+import BottomBar from "@/components/BottomBar";
+import SettingsModal from "@/components/SettingsModal";
+import AccountModal from "@/components/AccountModal";
+import AISignalDashboard from "@/components/AISignalDashboard";
+import SmartRiskManager from "@/components/SmartRiskManager";
+import NotificationsPanel from "@/components/NotificationsPanel";
+import BacktestEngine from "@/components/BacktestEngine";
+import TradingJournal from "@/components/TradingJournal";
+import Gamification from "@/components/Gamification";
+import MarketHeatmap from "@/components/MarketHeatmap";
+import MultiTimeframe from "@/components/MultiTimeframe";
+import AIChatAssistant from "@/components/AIChatAssistant";
+import SocialCopyTrade from "@/components/SocialCopyTrade";
+import { 
+  User, 
+  LogIn, 
+  CheckCircle2, 
+  LayoutDashboard, 
+  Wallet, 
+  Activity, 
+  BarChart2, 
+  Play, 
+  Square 
+} from "lucide-react";
+
+const panelComponents: Record<string, React.ComponentType> = {
+  'แดชบอร์ด': MainDashboard,
+  'AI สัญญาณ': AISignalDashboard,
+  'ความเสี่ยง': SmartRiskManager,
+  'แจ้งเตือน': NotificationsPanel,
+  'Backtest': BacktestEngine,
+  'บันทึก': TradingJournal,
+  'รางวัล': Gamification,
+  'Heatmap': MarketHeatmap,
+  'ไทม์เฟรม': MultiTimeframe,
+  'AI Chat': AIChatAssistant,
+  'Copy Trade': SocialCopyTrade,
+};
+
+type MobileViewTab = 'panel' | 'portfolio' | 'orders' | 'chart';
+
+export default function Home() {
+  const { 
+    activePanel, 
+    setActivePanel, 
+    user, 
+    setIsLoginModalOpen, 
+    isRunning, 
+    setIsRunning,
+    notifications
+  } = useTrading();
+
+  const [mobileView, setMobileView] = useState<MobileViewTab>('panel');
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  const ActiveComponent = panelComponents[activePanel] || MainDashboard;
+
+  return (
+    <main className="flex flex-col h-screen bg-slate-950 text-slate-200 font-sans overflow-hidden select-none">
+      {/* Top Header: Navigation Tabs + Account Profile */}
+      <header className="w-full bg-[#131b2f] border-b border-slate-800 px-2 sm:px-4 py-1.5 flex items-center justify-between gap-2 shrink-0 z-30 shadow-md">
+        {/* Navigation Tabs (Smooth touch scrolling on all devices) */}
+        <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto scrollbar-none py-0.5 max-w-[calc(100vw-110px)] sm:max-w-none">
+          {Object.keys(panelComponents).map((key) => {
+            const isActive = activePanel === key;
+            return (
+              <button
+                key={key}
+                onClick={() => {
+                  setActivePanel(key);
+                  setMobileView('panel');
+                }}
+                className={`px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs rounded-md whitespace-nowrap transition-all cursor-pointer font-medium ${
+                  isActive
+                    ? 'bg-blue-600/30 text-blue-400 border border-blue-500/60 shadow-xs'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 border border-transparent'
+                }`}
+              >
+                {key}
+                {key === 'แจ้งเตือน' && unreadCount > 0 && (
+                  <span className="ml-1 px-1.5 py-0.2 text-[9px] bg-red-500 text-white rounded-full font-bold">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Account / Login Profile Button (Compact on Mobile, Full on Desktop) */}
+        <div className="flex items-center shrink-0">
+          <button
+            onClick={() => setIsLoginModalOpen(true)}
+            className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-700/80 hover:border-blue-500/60 rounded-lg text-xs transition-all cursor-pointer shadow-xs"
+            title="จัดการบัญชีและเข้าสู่ระบบ"
+          >
+            <div className="w-6 h-6 rounded-full bg-blue-600/30 border border-blue-500/50 flex items-center justify-center text-blue-400">
+              {user.isLoggedIn ? <User size={13} /> : <LogIn size={13} />}
+            </div>
+            
+            <div className="hidden md:flex flex-col text-left">
+              <span className="text-[11px] font-bold text-slate-200 leading-tight flex items-center gap-1">
+                {user.email.split('@')[0]}
+                {user.isLoggedIn && <CheckCircle2 size={11} className="text-green-400" />}
+              </span>
+              <span className="text-[9px] text-slate-400 leading-tight">
+                {user.broker} • <strong className={user.accountType === 'REAL' ? 'text-green-400' : 'text-amber-400'}>{user.accountType === 'REAL' ? 'บัญชีจริง' : 'ทดลองเทรด'}</strong>
+              </span>
+            </div>
+
+            <span className={`md:hidden text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+              user.accountType === 'REAL' 
+                ? 'bg-green-500/20 text-green-400 border-green-500/40' 
+                : 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+            }`}>
+              {user.accountType === 'REAL' ? 'REAL' : 'DEMO'}
+            </span>
+          </button>
+        </div>
+      </header>
+
+      {/* Mobile Sub-Navigation Bar (Shown only on Mobile < 768px) */}
+      <div className="md:hidden bg-[#0c1222] border-b border-slate-800/80 px-2 py-1 flex items-center justify-around text-xs shrink-0 z-20">
+        <button
+          onClick={() => setMobileView('panel')}
+          className={`flex items-center gap-1 px-2.5 py-1 rounded transition-colors ${
+            mobileView === 'panel' 
+              ? 'bg-blue-600/25 text-blue-400 font-bold border border-blue-500/40' 
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <LayoutDashboard size={13} />
+          <span>{activePanel}</span>
+        </button>
+        <button
+          onClick={() => setMobileView('portfolio')}
+          className={`flex items-center gap-1 px-2.5 py-1 rounded transition-colors ${
+            mobileView === 'portfolio' 
+              ? 'bg-amber-500/25 text-amber-400 font-bold border border-amber-500/40' 
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Wallet size={13} />
+          <span>ทุน & เป้า</span>
+        </button>
+        <button
+          onClick={() => setMobileView('orders')}
+          className={`flex items-center gap-1 px-2.5 py-1 rounded transition-colors ${
+            mobileView === 'orders' 
+              ? 'bg-green-500/25 text-green-400 font-bold border border-green-500/40' 
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Activity size={13} />
+          <span>ออเดอร์สด</span>
+        </button>
+        <button
+          onClick={() => setMobileView('chart')}
+          className={`flex items-center gap-1 px-2.5 py-1 rounded transition-colors ${
+            mobileView === 'chart' 
+              ? 'bg-purple-500/25 text-purple-400 font-bold border border-purple-500/40' 
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <BarChart2 size={13} />
+          <span>กราฟแท่ง</span>
+        </button>
+      </div>
+
+      {/* Main Workspace Layout */}
+      <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden relative">
+        {/* Left Sidebar (Desktop: always visible, Mobile: visible when 'portfolio' tab is active) */}
+        <div className={`
+          ${mobileView === 'portfolio' ? 'flex flex-1' : 'hidden'} 
+          md:flex w-full md:w-56 lg:w-64 shrink-0 h-full overflow-hidden
+        `}>
+          <SidebarLeft />
+        </div>
+        
+        {/* Center Main Panel (Desktop: always visible, Mobile: visible when 'panel' tab is active) */}
+        <div className={`
+          ${mobileView === 'panel' ? 'flex flex-1' : 'hidden'} 
+          md:flex flex-1 flex-col min-h-0 h-full overflow-hidden relative
+        `}>
+          <ActiveComponent />
+          <SettingsModal />
+          <AccountModal />
+        </div>
+
+        {/* Right Sidebar (Desktop: always visible, Mobile: visible when 'orders' tab is active) */}
+        <div className={`
+          ${mobileView === 'orders' ? 'flex flex-1' : 'hidden'} 
+          md:flex w-full md:w-64 xl:w-72 shrink-0 h-full overflow-hidden
+        `}>
+          <SidebarRight />
+        </div>
+
+        {/* Mobile Dedicated Chart View */}
+        {mobileView === 'chart' && (
+          <div className="md:hidden flex flex-1 flex-col min-h-0 h-full overflow-y-auto p-2 bg-[#0a0f1c]">
+            <div className="text-xs font-bold text-slate-300 mb-2 px-1">กราฟผลลัพธ์ประสิทธิภาพ (Performance Bar)</div>
+            <BottomBar />
+          </div>
+        )}
+      </div>
+      
+      {/* Bottom Bar (Desktop: docked at bottom, Mobile: hidden by default or shown in tab) */}
+      <div className="hidden md:block w-full shrink-0">
+        <BottomBar />
+      </div>
+
+      {/* Mobile Floating Quick Action START/STOP Button (Allows controlling bot from ANY screen on phone) */}
+      <div className="md:hidden fixed bottom-3 right-3 z-40">
+        <button
+          onClick={() => setIsRunning(!isRunning)}
+          className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full font-bold text-xs shadow-xl transition-all ${
+            isRunning
+              ? 'bg-red-600 hover:bg-red-500 text-white shadow-red-600/40 animate-pulse'
+              : 'bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 text-white shadow-amber-500/30'
+          }`}
+        >
+          {isRunning ? <Square size={13} fill="currentColor" /> : <Play size={13} fill="currentColor" />}
+          <span>{isRunning ? 'STOP BOT' : 'START BOT'}</span>
+        </button>
+      </div>
+    </main>
+  );
+}

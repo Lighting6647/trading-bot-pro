@@ -1,0 +1,412 @@
+"use client";
+
+import { useState } from 'react';
+import { 
+  User, 
+  X, 
+  ShieldCheck, 
+  Key, 
+  Mail, 
+  Globe, 
+  CheckCircle2, 
+  LogOut, 
+  LogIn, 
+  Sparkles, 
+  Server, 
+  Lock, 
+  ArrowRightLeft,
+  Eye,
+  EyeOff
+} from 'lucide-react';
+import { useTrading } from '@/context/TradingContext';
+
+const brokerList = [
+  { id: 'IQ Option', name: 'IQ Option (IQ Broker)', icon: '🟢', minDeposit: '฿350' },
+  { id: 'Exness', name: 'Exness Trade', icon: '🟡', minDeposit: '฿300' },
+  { id: 'Alpaca', name: 'Alpaca Trading API', icon: '🦙', minDeposit: '$0' },
+  { id: 'Binance', name: 'Binance Crypto & Futures', icon: '🔶', minDeposit: '$10' },
+  { id: 'MetaTrader', name: 'MetaTrader 5 (MT5 Broker)', icon: '🔷', minDeposit: '฿500' },
+];
+
+export default function AccountModal() {
+  const { 
+    user, 
+    isLoginModalOpen, 
+    setIsLoginModalOpen, 
+    switchAccountType, 
+    login, 
+    logout,
+    capital,
+    profit,
+    addNotification
+  } = useTrading();
+
+  const [activeTab, setActiveTab] = useState<'status' | 'login'>(user.isLoggedIn ? 'status' : 'login');
+  
+  // Login Form State
+  const [email, setEmail] = useState(user.email || '');
+  const [password, setPassword] = useState('••••••••••••');
+  const [showPassword, setShowPassword] = useState(false);
+  const [broker, setBroker] = useState(user.broker || 'IQ Option');
+  const [targetType, setTargetType] = useState<'DEMO' | 'REAL'>(user.accountType || 'DEMO');
+  const [apiKey, setApiKey] = useState('');
+  const [isConnecting, setIsConnecting] = useState(false);
+
+  if (!isLoginModalOpen) return null;
+
+  const handleLoginSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) {
+      addNotification('risk', '⚠️ กรุณาระบุอีเมลหรือ Account ID');
+      return;
+    }
+
+    setIsConnecting(true);
+    setTimeout(() => {
+      login({
+        email: email.trim(),
+        broker,
+        accountType: targetType,
+        accountNumber: `ACC-${Math.floor(1000000 + Math.random() * 9000000)}`,
+      });
+      setIsConnecting(false);
+      setActiveTab('status');
+    }, 700);
+  };
+
+  const handleQuickDemo = () => {
+    setEmail('center.art@mss.com');
+    setBroker('IQ Option');
+    setTargetType('DEMO');
+    login({
+      email: 'center.art@mss.com',
+      broker: 'IQ Option',
+      accountType: 'DEMO',
+      accountNumber: 'ACC-8839210',
+    });
+    setActiveTab('status');
+  };
+
+  const totalBalance = capital + profit;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+      <div className="bg-[#0f172a] border border-blue-500/50 rounded-xl max-w-md w-full shadow-2xl overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="bg-[#1e293b] px-5 py-3.5 border-b border-slate-700 flex justify-between items-center">
+          <div className="flex items-center gap-2.5 text-blue-400 font-bold text-sm md:text-base">
+            <User size={18} />
+            <span>บัญชีและการเข้าสู่ระบบ (Account & Login)</span>
+          </div>
+          <button 
+            onClick={() => setIsLoginModalOpen(false)}
+            className="text-slate-400 hover:text-white p-1 rounded-md hover:bg-slate-700/50 cursor-pointer"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Tab Selection */}
+        <div className="flex border-b border-slate-800 bg-slate-900/60 text-xs">
+          <button
+            onClick={() => setActiveTab('status')}
+            className={`flex-1 py-2.5 font-semibold text-center transition-colors cursor-pointer ${
+              activeTab === 'status' 
+                ? 'text-blue-400 border-b-2 border-blue-500 bg-blue-500/10' 
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            สถานะบัญชีปัจจุบัน
+          </button>
+          <button
+            onClick={() => setActiveTab('login')}
+            className={`flex-1 py-2.5 font-semibold text-center transition-colors cursor-pointer ${
+              activeTab === 'login' 
+                ? 'text-blue-400 border-b-2 border-blue-500 bg-blue-500/10' 
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            เชื่อมต่อโบรกเกอร์ / สลับบัญชี
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-5 overflow-y-auto max-h-[75vh] text-slate-200 text-xs space-y-4">
+          {activeTab === 'status' ? (
+            /* TAB 1: STATUS & PROFILE */
+            <div className="space-y-4">
+              {/* Profile Card */}
+              <div className="bg-gradient-to-br from-slate-900 via-[#131b2f] to-slate-900 p-4 rounded-xl border border-slate-800 relative overflow-hidden">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400 text-xl font-bold shadow-md shadow-blue-500/20">
+                      {user.email.slice(0, 1).toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="font-bold text-sm text-white flex items-center gap-1.5">
+                        <span>{user.email}</span>
+                        {user.isLoggedIn && (
+                          <CheckCircle2 size={14} className="text-green-400" />
+                        )}
+                      </div>
+                      <div className="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
+                        <span>โบรกเกอร์: <strong className="text-amber-400">{user.broker}</strong></span>
+                        <span>•</span>
+                        <span className="font-mono text-slate-400">{user.accountNumber}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Account Badge */}
+                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide uppercase border ${
+                    user.accountType === 'REAL' 
+                      ? 'bg-green-500/20 text-green-400 border-green-500/40' 
+                      : 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                  }`}>
+                    {user.accountType === 'REAL' ? '● บัญชีจริง' : '○ ทดลองเทรด'}
+                  </span>
+                </div>
+
+                {/* Balance Stats */}
+                <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-800/80">
+                  <div>
+                    <div className="text-[10px] text-slate-400">ยอดเงินในพอร์ต (Balance)</div>
+                    <div className="text-base font-bold font-mono text-white mt-0.5">
+                      {totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ฿
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-slate-400">กำไร/ขาดทุนรอบนี้</div>
+                    <div className={`text-base font-bold font-mono mt-0.5 ${profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {profit > 0 ? '+' : ''}{profit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ฿
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Account Type Switcher */}
+              <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800 space-y-2">
+                <div className="font-semibold text-slate-300 flex items-center gap-1.5">
+                  <ArrowRightLeft size={14} className="text-blue-400" />
+                  <span>สลับประเภทบัญชี (Demo / Real)</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => switchAccountType('DEMO')}
+                    className={`py-2 px-3 rounded-lg border text-center transition-all cursor-pointer ${
+                      user.accountType === 'DEMO'
+                        ? 'bg-amber-500/20 border-amber-500/60 text-amber-400 font-bold shadow-xs'
+                        : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <div>บัญชีทดลอง (Demo)</div>
+                    <div className="text-[10px] text-slate-400 font-normal">ซ้อมเทรดปลอดภัย</div>
+                  </button>
+                  <button
+                    onClick={() => switchAccountType('REAL')}
+                    className={`py-2 px-3 rounded-lg border text-center transition-all cursor-pointer ${
+                      user.accountType === 'REAL'
+                        ? 'bg-green-500/20 border-green-500/60 text-green-400 font-bold shadow-xs'
+                        : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <div>บัญชีจริง (Real)</div>
+                    <div className="text-[10px] text-slate-400 font-normal">เทรดด้วยเงินจริง</div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Connection Status */}
+              <div className="bg-slate-900/40 p-3 rounded-xl border border-slate-800 text-[11px] space-y-1.5 text-slate-400">
+                <div className="flex justify-between items-center">
+                  <span className="flex items-center gap-1.5 text-slate-300">
+                    <Server size={13} className="text-green-400" />
+                    <span>สถานะ API โบรกเกอร์</span>
+                  </span>
+                  <span className="text-green-400 font-semibold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                    <span>เชื่อมต่อสมบูรณ์ (18ms)</span>
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>โปรโตคอล:</span>
+                  <span className="font-mono text-slate-300">WebSocket SSL v2 / Secure API</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>สิทธิ์การใช้งานบอท:</span>
+                  <span className="text-emerald-400 font-semibold">Trading Bot Pro Full License</span>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => setActiveTab('login')}
+                  className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Key size={14} />
+                  <span>เปลี่ยนบัญชี / โบรกเกอร์</span>
+                </button>
+                <button
+                  onClick={logout}
+                  className="py-2 px-4 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <LogOut size={14} />
+                  <span>ออกจากระบบ</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* TAB 2: LOGIN & CONNECT BROKER FORM */
+            <form onSubmit={handleLoginSubmit} className="space-y-3.5">
+              <div className="text-slate-400 text-xs mb-1">
+                กรอกข้อมูลบัญชีเพื่อเชื่อมต่อระบบบอทกับโบรกเกอร์ที่คุณใช้งาน
+              </div>
+
+              {/* Broker Selector */}
+              <div className="space-y-1">
+                <label className="text-slate-300 font-semibold flex items-center gap-1">
+                  <Globe size={13} className="text-blue-400" />
+                  <span>เลือกโบรกเกอร์ (Broker)</span>
+                </label>
+                <div className="grid grid-cols-1 gap-1.5">
+                  {brokerList.map(b => (
+                    <label 
+                      key={b.id}
+                      onClick={() => setBroker(b.id)}
+                      className={`p-2 rounded-lg border flex items-center justify-between cursor-pointer transition-all ${
+                        broker === b.id 
+                          ? 'bg-blue-600/20 border-blue-500 text-white font-semibold' 
+                          : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span>{b.icon}</span>
+                        <span>{b.name}</span>
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-mono">ขั้นต่ำ {b.minDeposit}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Account Type (Demo vs Real) */}
+              <div className="space-y-1 pt-1">
+                <label className="text-slate-300 font-semibold">ประเภทบัญชีที่ต้องการเข้า:</label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTargetType('DEMO')}
+                    className={`flex-1 py-1.5 rounded-lg border text-xs font-semibold transition-colors cursor-pointer ${
+                      targetType === 'DEMO'
+                        ? 'bg-amber-500/20 text-amber-400 border-amber-500/60'
+                        : 'bg-slate-900 text-slate-400 border-slate-800'
+                    }`}
+                  >
+                    บัญชีทดลอง (Demo)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTargetType('REAL')}
+                    className={`flex-1 py-1.5 rounded-lg border text-xs font-semibold transition-colors cursor-pointer ${
+                      targetType === 'REAL'
+                        ? 'bg-green-500/20 text-green-400 border-green-500/60'
+                        : 'bg-slate-900 text-slate-400 border-slate-800'
+                    }`}
+                  >
+                    บัญชีจริง (Real)
+                  </button>
+                </div>
+              </div>
+
+              {/* Email / Account ID */}
+              <div className="space-y-1">
+                <label className="text-slate-300 font-semibold flex items-center gap-1">
+                  <Mail size={13} className="text-blue-400" />
+                  <span>อีเมล หรือ Account ID</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="เช่น user@example.com หรือ ID บัญชี"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 focus:border-blue-500 rounded-lg px-3 py-2 text-white outline-none font-mono"
+                />
+              </div>
+
+              {/* Password */}
+              <div className="space-y-1">
+                <label className="text-slate-300 font-semibold flex items-center gap-1">
+                  <Lock size={13} className="text-blue-400" />
+                  <span>รหัสผ่านโบรกเกอร์ (Password)</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="รหัสผ่านบัญชี"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 focus:border-blue-500 rounded-lg px-3 py-2 text-white outline-none font-mono pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-200"
+                  >
+                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Optional API Key */}
+              <div className="space-y-1">
+                <label className="text-slate-400 flex items-center gap-1">
+                  <Key size={13} />
+                  <span>API Token / Secret Key (ตัวเลือกเพิ่มเติม)</span>
+                </label>
+                <input
+                  type="password"
+                  placeholder="สำหรับ Alpaca หรือ Binance API"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-300 outline-none font-mono text-[11px]"
+                />
+              </div>
+
+              {/* Quick Fill Button */}
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={handleQuickDemo}
+                  className="w-full py-1.5 px-3 bg-slate-800/80 hover:bg-slate-800 text-amber-400 rounded-lg text-[11px] border border-slate-700 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Sparkles size={13} />
+                  <span>คลิกเดียว: เข้าใช้งานด้วยบัญชีตัวอย่าง (center.art@mss.com)</span>
+                </button>
+              </div>
+
+              {/* Submit Button */}
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={isConnecting}
+                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-md shadow-blue-600/30"
+                >
+                  {isConnecting ? (
+                    <span>กำลังเชื่อมต่อ API...</span>
+                  ) : (
+                    <>
+                      <LogIn size={15} />
+                      <span>เข้าสู่ระบบ & เชื่อมต่อบอท</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

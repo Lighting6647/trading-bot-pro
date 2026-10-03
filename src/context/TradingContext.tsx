@@ -924,7 +924,26 @@ export function TradingProvider({ children }: { children: ReactNode }) {
         note: `${aiConfig.selectedAsset} (${aiConfig.strategy})`,
         tags: [aiConfig.selectedAsset.split(' ')[0], aiConfig.strategy],
       };
-      
+
+      // Dispatch to Userscript Bridge for real Exness execution
+      if (typeof window !== 'undefined') {
+        const payload = {
+          action: 'EXECUTE_ORDER',
+          symbol: aiConfig.selectedAsset.includes('GOLD') ? 'XAUUSDm' : 'EURUSDm',
+          side: type,
+          lots: 0.01,
+          amount: tradeAmount,
+          accountNumber: user.accountNumber || '160187619',
+          timestamp: Date.now(),
+        };
+        window.dispatchEvent(new CustomEvent('exness_order_dispatch', { detail: payload }));
+        try {
+          const bc = new BroadcastChannel("exness_trading_bot_pro");
+          bc.postMessage(payload);
+          bc.close();
+        } catch {}
+      }
+
       setTrades(prev => [newTrade, ...prev].slice(0, 100));
       const pnl = isWin ? tradeAmount * 0.85 : -tradeAmount;
       const newTotalProfit = profitRef.current + pnl;

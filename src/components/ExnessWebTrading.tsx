@@ -86,6 +86,25 @@ export default function ExnessWebTrading() {
     setIsPlacingOrder(true);
     try {
       const symbol = aiConfig?.selectedAsset?.includes('GOLD') ? 'XAUUSDm' : 'EURUSDm';
+
+      // Dispatch to local event & BroadcastChannel for Userscript bridge
+      if (typeof window !== 'undefined') {
+        const orderPayload = {
+          action: 'EXECUTE_ORDER',
+          symbol,
+          side,
+          lots: 0.01,
+          accountNumber: loginId || '160187619',
+          timestamp: Date.now(),
+        };
+        window.dispatchEvent(new CustomEvent('exness_order_dispatch', { detail: orderPayload }));
+        try {
+          const bc = new BroadcastChannel("exness_trading_bot_pro");
+          bc.postMessage(orderPayload);
+          bc.close();
+        } catch {}
+      }
+
       const res = await fetch('/api/broker/exness', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -113,54 +132,97 @@ export default function ExnessWebTrading() {
   };
 
   const userscriptCode = `// ==UserScript==
-// @name         Trading Bot Pro - Exness Live Bridge Auto-Trader
-// @namespace    http://localhost:3000/
-// @version      2.0
-// @description  Connects Trading Bot Pro AI signals directly to Exness WebTrading to execute real orders
+// @name         Trading Bot Pro - Exness Live Bridge Auto-Trader (Vercel & Exness)
+// @namespace    https://trading-bot-pro-ivory.vercel.app/
+// @version      3.0
+// @description  Cross-origin live order bridge from trading-bot-pro-ivory.vercel.app to Exness WebTrading
+// @match        https://trading-bot-pro-ivory.vercel.app/*
+// @match        http://localhost:*/*
 // @match        https://my.exness.com/*
 // @match        https://webterminal.exness.com/*
-// @grant        none
+// @grant        GM_setValue
+// @grant        GM_getValue
+// @grant        GM_addValueChangeListener
 // ==/UserScript==
 
 (function() {
     'use strict';
-    console.log("⚡ [Trading Bot Pro] Bridge Initialized on Exness (#160187619)!");
 
-    // Create On-Screen HUD Status Badge on Exness
-    const hud = document.createElement("div");
-    hud.style.cssText = "position:fixed;bottom:20px;right:20px;z-index:999999;background:#0f172a;color:#10b981;padding:10px 16px;border-radius:8px;border:1px solid #10b981;font-family:sans-serif;font-size:12px;font-weight:bold;box-shadow:0 4px 20px rgba(0,0,0,0.5);display:flex;align-items:center;gap:8px;";
-    hud.innerHTML = "<span style='width:8px;height:8px;background:#10b981;border-radius:50%;display:inline-block;animation:pulse 1s infinite;'></span> Trading Bot Pro: Bridge LIVE (#160187619)";
-    document.body.appendChild(hud);
+    const isBotSite = location.hostname.includes('vercel.app') || location.hostname.includes('localhost');
+    const isExnessSite = location.hostname.includes('exness.com');
 
-    const bc = new BroadcastChannel("exness_trading_bot_pro");
-    bc.onmessage = (event) => {
-        const data = event.data;
-        if (data?.action === 'EXECUTE_ORDER') {
-            console.log("🚀 [Trading Bot Pro] Incoming Order:", data);
+    // ================= 1. RUNNING ON TRADING BOT SITE =================
+    if (isBotSite) {
+        console.log("⚡ [Trading Bot Pro] Transmitter Bridge Attached on " + location.hostname);
+
+        // Listen for internal dispatch events from the bot
+        window.addEventListener('exness_order_dispatch', (e) => {
+            if (e.detail) {
+                console.log("📤 [Transmitter] Forwarding Order to Exness:", e.detail);
+                GM_setValue('exness_pending_order', { ...e.detail, _t: Date.now() });
+            }
+        });
+
+        // BroadcastChannel fallback
+        try {
+            const bc = new BroadcastChannel("exness_trading_bot_pro");
+            bc.onmessage = (event) => {
+                if (event.data?.action === 'EXECUTE_ORDER') {
+                    console.log("📤 [Transmitter BC] Forwarding Order to Exness:", event.data);
+                    GM_setValue('exness_pending_order', { ...event.data, _t: Date.now() });
+                }
+            };
+        } catch(e) {}
+    }
+
+    // ================= 2. RUNNING ON EXNESS SITE =================
+    if (isExnessSite) {
+        console.log("⚡ [Trading Bot Pro] Receiver Bridge LIVE on Exness (#160187619)!");
+
+        // Create On-Screen HUD Badge
+        const hud = document.createElement("div");
+        hud.style.cssText = "position:fixed;bottom:20px;right:20px;z-index:999999;background:#0f172a;color:#10b981;padding:10px 16px;border-radius:10px;border:2px solid #10b981;font-family:sans-serif;font-size:12px;font-weight:bold;box-shadow:0 6px 25px rgba(0,0,0,0.6);display:flex;align-items:center;gap:8px;";
+        hud.innerHTML = "<span style='width:10px;height:10px;background:#10b981;border-radius:50%;display:inline-block;'></span> Trading Bot Pro: Bridge LIVE (#160187619)";
+        document.body.appendChild(hud);
+
+        function triggerOrder(data) {
+            if (!data) return;
+            console.log("🎯 [Receiver] Executing on Exness DOM:", data);
             hud.style.borderColor = "#f59e0b";
-            hud.innerText = "⚡ Executing " + data.side + " " + data.symbol + " (Lot: " + data.lots + ")...";
+            hud.innerText = "⚡ Executing " + data.side + " " + data.symbol + " (Lot: " + (data.lots || 0.01) + ")...";
 
-            // Click matching Buy/Sell button on Exness Web terminal DOM
             const isBuy = data.side === 'BUY';
-            const buttons = Array.from(document.querySelectorAll('button'));
+            const buttons = Array.from(document.querySelectorAll('button, div[role="button"]'));
             const targetBtn = buttons.find(b => {
-                const text = b.innerText.trim().toUpperCase();
-                return isBuy ? (text.includes('BUY') || text.includes('ซื้อ')) : (text.includes('SELL') || text.includes('ขาย'));
+                const text = (b.innerText || '').trim().toUpperCase();
+                return isBuy 
+                    ? (text.includes('BUY') || text.includes('ซื้อ') || text.includes('BUY LIMIT') || text.includes('BUY MARKET')) 
+                    : (text.includes('SELL') || text.includes('ขาย') || text.includes('SELL LIMIT') || text.includes('SELL MARKET'));
             });
 
             if (targetBtn) {
                 targetBtn.click();
                 hud.style.borderColor = "#10b981";
-                hud.innerText = "✅ Order Placed: " + data.side + " " + data.symbol + "!";
+                hud.innerText = "✅ Placed " + data.side + " " + data.symbol + " Successfully!";
                 setTimeout(() => {
-                    hud.innerHTML = "<span style='width:8px;height:8px;background:#10b981;border-radius:50%;display:inline-block;'></span> Trading Bot Pro: Bridge LIVE (#160187619)";
-                }, 3000);
+                    hud.innerHTML = "<span style='width:10px;height:10px;background:#10b981;border-radius:50%;display:inline-block;'></span> Trading Bot Pro: Bridge LIVE (#160187619)";
+                    hud.style.borderColor = "#10b981";
+                }, 4000);
             } else {
                 hud.style.borderColor = "#ef4444";
-                hud.innerText = "⚠️ Please open trade panel for " + data.symbol;
+                hud.innerText = "⚠️ Trade panel for " + data.symbol + " not open. Please open chart.";
             }
         }
-    };
+
+        // Cross-domain listener via GM_addValueChangeListener
+        if (typeof GM_addValueChangeListener !== 'undefined') {
+            GM_addValueChangeListener('exness_pending_order', (name, oldVal, newVal) => {
+                if (newVal && newVal._t !== oldVal?._t) {
+                    triggerOrder(newVal);
+                }
+            });
+        }
+    }
 })();`;
 
   const handleCopyScript = () => {

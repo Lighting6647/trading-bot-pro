@@ -102,8 +102,8 @@ export default function Home() {
     <main ref={containerRef} className="flex flex-col h-screen bg-slate-950 text-slate-200 font-sans overflow-hidden select-none">
       {/* Top Header: Navigation Tabs + Account Profile */}
       <header className="w-full bg-[#131b2f] border-b border-slate-800 px-2 sm:px-4 py-1.5 flex items-center justify-between gap-2 shrink-0 z-30 shadow-md">
-        {/* Navigation Tabs (Smooth touch scrolling on all devices) */}
-        <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto scrollbar-none py-0.5 max-w-[calc(100vw-110px)] sm:max-w-none">
+        {/* Navigation Tabs (Smooth touch and mouse scrolling on all devices) */}
+        <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto py-0.5 flex-1 mr-2 scrollbar-none">
           {Object.keys(panelComponents).map((key) => {
             const isActive = activePanel === key;
             return (
@@ -113,7 +113,7 @@ export default function Home() {
                   setActivePanel(key);
                   setMobileView('panel');
                 }}
-                className={`nav-tab-item px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs rounded-md whitespace-nowrap transition-all cursor-pointer font-medium ${
+                className={`nav-tab-item px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs rounded-md whitespace-nowrap transition-all cursor-pointer font-medium shrink-0 ${
                   isActive
                     ? 'bg-blue-600/30 text-blue-400 border border-blue-500/60 shadow-xs'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 border border-transparent'
@@ -248,9 +248,6 @@ export default function Home() {
           )}
 
           <ActiveComponent />
-          <SettingsModal />
-          <AccountModal />
-          <AIPreTradeConfigModal />
         </div>
 
         {/* Right Sidebar (Desktop: always visible, Mobile: visible when 'orders' tab is active) */}
@@ -274,6 +271,11 @@ export default function Home() {
       <div className="hidden md:block w-full shrink-0">
         <BottomBar />
       </div>
+
+      {/* Global Modals (Rendered at root to prevent GSAP transform clipping) */}
+      <SettingsModal />
+      <AccountModal />
+      <AIPreTradeConfigModal />
 
       {/* Mobile Floating Quick Action START/STOP Button (Allows controlling bot from ANY screen on phone) */}
       <div className="md:hidden fixed bottom-3 right-3 z-40">

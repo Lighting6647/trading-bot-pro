@@ -169,10 +169,10 @@ export default function AccountModal() {
   const totalBalance = capital + profit;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-      <div className="bg-[#0f172a] border border-blue-500/50 rounded-xl max-w-md w-full shadow-2xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in overflow-y-auto">
+      <div className="bg-[#0f172a] border border-blue-500/50 rounded-xl max-w-md w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh] my-auto">
         {/* Header */}
-        <div className="bg-[#1e293b] px-4 py-3 border-b border-slate-700 flex justify-between items-center">
+        <div className="bg-[#1e293b] px-4 py-3 border-b border-slate-700 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-2">
             <button 
               onClick={() => setIsLoginModalOpen(false)}

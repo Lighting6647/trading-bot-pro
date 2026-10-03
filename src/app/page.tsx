@@ -14,13 +14,6 @@ import AIPreTradeConfigModal from "@/components/AIPreTradeConfigModal";
 import AISignalDashboard from "@/components/AISignalDashboard";
 import SmartRiskManager from "@/components/SmartRiskManager";
 import NotificationsPanel from "@/components/NotificationsPanel";
-import BacktestEngine from "@/components/BacktestEngine";
-import TradingJournal from "@/components/TradingJournal";
-import Gamification from "@/components/Gamification";
-import MarketHeatmap from "@/components/MarketHeatmap";
-import MultiTimeframe from "@/components/MultiTimeframe";
-import AIChatAssistant from "@/components/AIChatAssistant";
-import SocialCopyTrade from "@/components/SocialCopyTrade";
 import ExnessWebTrading from "@/components/ExnessWebTrading";
 import { 
   User, 
@@ -41,13 +34,6 @@ const panelComponents: Record<string, React.ComponentType> = {
   'AI สัญญาณ': AISignalDashboard,
   'ความเสี่ยง': SmartRiskManager,
   'แจ้งเตือน': NotificationsPanel,
-  'Backtest': BacktestEngine,
-  'บันทึก': TradingJournal,
-  'รางวัล': Gamification,
-  'Heatmap': MarketHeatmap,
-  'ไทม์เฟรม': MultiTimeframe,
-  'AI Chat': AIChatAssistant,
-  'Copy Trade': SocialCopyTrade,
 };
 
 type MobileViewTab = 'panel' | 'portfolio' | 'orders' | 'chart';

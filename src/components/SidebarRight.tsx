@@ -9,28 +9,17 @@ import {
   Brain, 
   Shield, 
   Bell, 
-  FlaskConical, 
-  BookOpen, 
-  Trophy, 
-  Flame as HeatmapIcon, 
-  Clock, 
-  Bot, 
-  Users 
+  Zap,
+  Lock
 } from 'lucide-react';
 import { useTrading } from '@/context/TradingContext';
 
 const menuItems = [
-  { key: 'แดชบอร์ด', icon: LayoutDashboard, color: 'text-green-400', label: 'แดชบอร์ด' },
-  { key: 'AI สัญญาณ', icon: Brain, color: 'text-purple-400', label: 'AI สัญญาณ' },
+  { key: 'แดชบอร์ด', icon: LayoutDashboard, color: 'text-green-400', label: 'แดชบอร์ดหลัก' },
+  { key: 'Exness เทรด', icon: Zap, color: 'text-amber-400', label: 'Exness WebTrading (สด)' },
+  { key: 'AI สัญญาณ', icon: Brain, color: 'text-purple-400', label: 'AI สัญญาณเทรด' },
   { key: 'ความเสี่ยง', icon: Shield, color: 'text-amber-400', label: 'จัดการความเสี่ยง' },
-  { key: 'แจ้งเตือน', icon: Bell, color: 'text-blue-400', label: 'แจ้งเตือน' },
-  { key: 'Backtest', icon: FlaskConical, color: 'text-cyan-400', label: 'Backtest' },
-  { key: 'บันทึก', icon: BookOpen, color: 'text-indigo-400', label: 'บันทึกเทรด' },
-  { key: 'รางวัล', icon: Trophy, color: 'text-yellow-400', label: 'รางวัล & Level' },
-  { key: 'Heatmap', icon: HeatmapIcon, color: 'text-orange-400', label: 'Heatmap' },
-  { key: 'ไทม์เฟรม', icon: Clock, color: 'text-teal-400', label: 'ไทม์เฟรม' },
-  { key: 'AI Chat', icon: Bot, color: 'text-pink-400', label: 'AI Chat' },
-  { key: 'Copy Trade', icon: Users, color: 'text-emerald-400', label: 'Copy Trade' },
+  { key: 'แจ้งเตือน', icon: Bell, color: 'text-blue-400', label: 'แจ้งเตือน & บันทึก' },
 ];
 
 export default function SidebarRight() {
@@ -44,9 +33,7 @@ export default function SidebarRight() {
     notifications, 
     isCooldown, 
     cooldownSeconds, 
-    level, 
-    xp,
-    language,
+    language, 
     setLanguage,
     addNotification,
     user,
@@ -69,9 +56,9 @@ export default function SidebarRight() {
           <div className={`w-2 h-2 rounded-full ${isRunning ? 'bg-green-500' : 'bg-red-500'} animate-pulse`}></div>
           {isRunning ? (isCooldown ? `COOLDOWN ${Math.floor(cooldownSeconds/60)}:${(cooldownSeconds%60).toString().padStart(2,'0')}` : 'RUNNING') : 'STOPPED'}
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-amber-400 text-[10px]">Lv.{level} ({xp}xp)</span>
-          <span className="text-amber-400 font-bold">LIVE TRADE</span>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+          <span className="text-emerald-400 font-mono font-bold text-[11px]">#{user.accountNumber || '160187619'}</span>
         </div>
       </div>
 

@@ -30,11 +30,30 @@ def initialize_mt5():
     print("=" * 50)
     print("🤖 TRADING BOT PRO - 100% FREE MT5 AUTO-TRADER")
     print("=" * 50)
-    print("⏳ กำลังเชื่อมต่อกับโปรแกรม MetaTrader 5...")
+    print("⏳ กำลังเชื่อมต่อกับโปรแกรม MetaTrader 5 EXNESS...")
 
-    if not mt5.initialize():
+    # Known MT5 installation paths on Windows
+    candidate_paths = [
+        r"C:\Program Files\MetaTrader 5 EXNESS\terminal64.exe",
+        r"C:\Program Files\Exness MetaTrader 5\terminal64.exe",
+        r"C:\Program Files\MetaTrader 5\terminal64.exe",
+    ]
+
+    initialized = False
+    for path in candidate_paths:
+        try:
+            if mt5.initialize(path=path):
+                initialized = True
+                break
+        except Exception:
+            pass
+
+    if not initialized:
+        initialized = mt5.initialize()
+
+    if not initialized:
         print(f"❌ ไม่สามารถเปิด MT5 ได้: {mt5.last_error()}")
-        print("💡 โปรดตรวจสอบว่าโปรแกรม MetaTrader 5 ติดตั้งและเปิดอยู่ในเครื่องแล้ว")
+        print("💡 โปรดเปิดโปรแกรม MetaTrader 5 EXNESS บนหน้าจอคอมพิวเตอร์ก่อนรันคำสั่งครับ")
         return False
 
     acc_info = mt5.account_info()

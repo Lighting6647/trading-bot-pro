@@ -21,6 +21,7 @@ import MarketHeatmap from "@/components/MarketHeatmap";
 import MultiTimeframe from "@/components/MultiTimeframe";
 import AIChatAssistant from "@/components/AIChatAssistant";
 import SocialCopyTrade from "@/components/SocialCopyTrade";
+import ExnessWebTrading from "@/components/ExnessWebTrading";
 import { 
   User, 
   LogIn, 
@@ -36,6 +37,7 @@ import {
 
 const panelComponents: Record<string, React.ComponentType> = {
   'แดชบอร์ด': MainDashboard,
+  'Exness เทรด': ExnessWebTrading,
   'AI สัญญาณ': AISignalDashboard,
   'ความเสี่ยง': SmartRiskManager,
   'แจ้งเตือน': NotificationsPanel,

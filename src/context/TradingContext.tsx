@@ -147,15 +147,15 @@ export const defaultBrokerLiveState: LiveBrokerState = {
   isLiveApiConnected: true,
   environment: 'LIVE',
   apiKey: 'exness_live_bridge_key',
-  apiSecret: 'exness_sec_7739210',
-  serverOrPassphrase: 'Exness-Real19',
+  apiSecret: 'exness_sec_160187619',
+  serverOrPassphrase: 'Exness-MT5Real',
   webhookUrl: 'https://my.exness.com/webtrading/',
   pingMs: 20,
-  lastSyncTime: '17:35:00',
-  currency: 'THB',
-  equity: 9995,
+  lastSyncTime: '17:48:00',
+  currency: 'USC',
+  equity: 1017.00,
   unrealizedPnl: 0,
-  marginAvailable: 9995,
+  marginAvailable: 1017.00,
 };
 
 // ============ CONTEXT TYPE ============
@@ -342,14 +342,14 @@ const defaultTimeframes: TimeframeAnalysis[] = [
 
 const defaultUser: UserAccount = {
   email: 'lighting6647@gmail.com',
-  name: 'Lighting6647',
+  name: 'Light Cent',
   broker: 'Exness',
   accountType: 'REAL',
-  accountNumber: 'EXN-7739210',
-  server: 'Exness-Real19',
-  realBalance: 9995,
+  accountNumber: '160187619',
+  server: 'Exness-MT5Real',
+  realBalance: 1017.00,
   demoBalance: 100000,
-  currency: 'THB',
+  currency: 'USC',
   isLoggedIn: true,
 };
 
@@ -371,12 +371,12 @@ export function TradingProvider({ children }: { children: ReactNode }) {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   // TP / SL Targets
-  const [takeProfitTarget, setTakeProfitTarget] = useState(50000);
-  const [stopLossTarget, setStopLossTarget] = useState(20000);
+  const [takeProfitTarget, setTakeProfitTarget] = useState(5000);
+  const [stopLossTarget, setStopLossTarget] = useState(2000);
   const [targetAction, setTargetAction] = useState<'stop' | 'alert' | 'reset'>('stop');
 
   // Separate states for Real and Demo accounts
-  const [realCapital, setRealCapital] = useState<number>(9995);
+  const [realCapital, setRealCapital] = useState<number>(1017.00);
   const [demoCapital, setDemoCapital] = useState<number>(100000);
   const [realProfit, setRealProfit] = useState<number>(0);
   const [demoProfit, setDemoProfit] = useState<number>(0);
@@ -384,7 +384,12 @@ export function TradingProvider({ children }: { children: ReactNode }) {
   const [demoTrades, setDemoTrades] = useState<Trade[]>([]);
 
   // AI Pre-Trade Config
-  const [aiConfig, setAiConfig] = useState<AIAutoTradeConfig>(defaultAiConfig);
+  const [aiConfig, setAiConfig] = useState<AIAutoTradeConfig>({
+    ...defaultAiConfig,
+    baseOrderAmount: 10,
+    dailyTakeProfit: 500,
+    dailyStopLoss: 200,
+  });
   const [isAiConfigModalOpen, setIsAiConfigModalOpen] = useState(false);
 
   // Real Broker Live API
@@ -397,12 +402,28 @@ export function TradingProvider({ children }: { children: ReactNode }) {
       const savedUser = localStorage.getItem('trading_user_account');
       if (savedUser) {
         const u = JSON.parse(savedUser);
+        // If placeholder account was saved earlier, upgrade to real user's Exness account
+        if (!u.accountNumber || u.accountNumber.includes('7739210') || u.realBalance === 10000 || u.realBalance === 9995) {
+          u.accountNumber = '160187619';
+          u.name = 'Light Cent';
+          u.broker = 'Exness';
+          u.server = 'Exness-MT5Real';
+          u.realBalance = 1017.00;
+          u.currency = 'USC';
+        }
         setUser(u);
         if (typeof u.realBalance === 'number') setRealCapital(u.realBalance);
         if (typeof u.demoBalance === 'number') setDemoCapital(u.demoBalance);
       }
       const savedRealCap = localStorage.getItem('trading_real_capital');
-      if (savedRealCap) setRealCapital(Number(savedRealCap));
+      if (savedRealCap) {
+        const num = Number(savedRealCap);
+        if (num === 10000 || num === 9995) {
+          setRealCapital(1017.00);
+        } else {
+          setRealCapital(num);
+        }
+      }
       const savedRealProfit = localStorage.getItem('trading_real_profit');
       if (savedRealProfit) setRealProfit(Number(savedRealProfit));
       const savedRealTrades = localStorage.getItem('trading_real_trades');

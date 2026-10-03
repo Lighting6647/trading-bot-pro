@@ -61,9 +61,9 @@ export default function AccountModal() {
   const [password, setPassword] = useState('••••••••••••');
   const [showPassword, setShowPassword] = useState(false);
   const [broker, setBroker] = useState(user.broker || 'Exness');
-  const [server, setServer] = useState(user.server || 'Exness-Real19');
+  const [server, setServer] = useState(user.server || 'Exness-MT5Real');
   const [targetType, setTargetType] = useState<'DEMO' | 'REAL'>(user.accountType || 'REAL');
-  const [customBalance, setCustomBalance] = useState<string>(capital ? capital.toString() : '10000');
+  const [customBalance, setCustomBalance] = useState<string>(capital ? capital.toString() : '1017');
   const [apiKey, setApiKey] = useState(brokerLiveState.apiKey || '');
   const [apiSecret, setApiSecret] = useState(brokerLiveState.apiSecret || '');
   const [webhookUrl, setWebhookUrl] = useState(brokerLiveState.webhookUrl || '');

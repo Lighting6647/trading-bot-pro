@@ -34,15 +34,15 @@ export default function ExnessWebTrading() {
     aiConfig 
   } = useTrading();
 
-  const [server, setServer] = useState(user.server || 'Exness-Real19');
-  const [loginId, setLoginId] = useState(user.accountNumber || '7739210');
-  const [balanceInput, setBalanceInput] = useState(capital.toString());
+  const [server, setServer] = useState(user.server || 'Exness-MT5Real');
+  const [loginId, setLoginId] = useState(user.accountNumber || '160187619');
+  const [balanceInput, setBalanceInput] = useState(capital ? capital.toString() : '1017');
   const [isSyncing, setIsSyncing] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [copiedScript, setCopiedScript] = useState(false);
   const [lastExnessOrder, setLastExnessOrder] = useState<any>(null);
   const [bridgeStatus, setBridgeStatus] = useState<'CONNECTED' | 'DISCONNECTED' | 'SYNCING'>('CONNECTED');
-  const [pingMs, setPingMs] = useState(22);
+  const [pingMs, setPingMs] = useState(20);
 
   const exnessWebTradingUrl = "https://my.exness.com/webtrading/";
 
@@ -53,7 +53,7 @@ export default function ExnessWebTrading() {
     try {
       const targetBal = forcedBalance !== undefined 
         ? forcedBalance 
-        : (parseFloat(balanceInput.replace(/,/g, '')) || capital);
+        : (parseFloat(balanceInput.replace(/,/g, '')) || capital || 1017.00);
 
       const res = await fetch('/api/broker/exness', {
         method: 'POST',
@@ -72,7 +72,7 @@ export default function ExnessWebTrading() {
         setCapital(data.balance);
         setPingMs(data.serverLatencyMs || 20);
         setBridgeStatus('CONNECTED');
-        addNotification('signal', `🟢 ซิงค์กับ Exness WebTrading (${server}) สำเร็จ: ฿${data.balance.toLocaleString()}`);
+        addNotification('signal', `🟢 ซิงค์กับ Exness WebTrading (#${loginId} - ${server}) สำเร็จ: ${data.balance.toLocaleString()} USC ($${(data.balance / 100).toFixed(2)} USD)`);
       }
     } catch (e: any) {
       addNotification('risk', `⚠️ ไม่สามารถซิงค์กับ Exness ได้: ${e.message}`);
@@ -103,7 +103,7 @@ export default function ExnessWebTrading() {
       const data = await res.json();
       if (data && data.success) {
         setLastExnessOrder(data);
-        addNotification('win', `🚀 ส่งออเดอร์ ${side} ${symbol} เข้า Exness Server (${server}) สำเร็จ! [Ticket: ${data.orderId}]`);
+        addNotification('win', `🚀 ส่งออเดอร์ ${side} ${symbol} เข้า Exness MT5 Standard Cent (#${loginId}) สำเร็จ! [Ticket: ${data.orderId}]`);
       }
     } catch (e: any) {
       addNotification('risk', `❌ ส่งออเดอร์เข้า Exness ล้มเหลว: ${e.message}`);
@@ -123,7 +123,7 @@ export default function ExnessWebTrading() {
 
 (function() {
     'use strict';
-    console.log("⚡ Trading Bot Pro Bridge Attached to Exness WebTrading!");
+    console.log("⚡ Trading Bot Pro Bridge Attached to Exness WebTrading (#160187619)!");
     const bc = new BroadcastChannel("exness_trading_bot_pro");
     bc.onmessage = (event) => {
         if (event.data?.action === 'EXECUTE_ORDER') {
@@ -138,6 +138,8 @@ export default function ExnessWebTrading() {
     setCopiedScript(true);
     setTimeout(() => setCopiedScript(false), 2500);
   };
+
+  const usdValue = (capital / 100).toFixed(2);
 
   return (
     <div className="w-full bg-[#0a0f1c] border border-slate-800 rounded-xl overflow-hidden shadow-2xl flex flex-col text-slate-200 h-full overflow-y-auto">
@@ -194,8 +196,8 @@ export default function ExnessWebTrading() {
               </span>
             </div>
             <div className="flex justify-between items-center text-xs">
-              <span className="text-slate-400">Login ID:</span>
-              <span className="font-mono text-emerald-400 font-bold">{user.accountNumber || 'EXN-7739210'}</span>
+              <span className="text-slate-400">พอร์ต / บัญชี:</span>
+              <span className="font-mono text-emerald-400 font-bold"># {user.accountNumber || '160187619'} (Standard Cent)</span>
             </div>
             <div className="flex justify-between items-center text-xs pt-1 border-t border-slate-800">
               <span className="text-slate-400">สถานะ Bridge:</span>
@@ -211,7 +213,7 @@ export default function ExnessWebTrading() {
             <div className="flex justify-between items-center text-xs">
               <span className="text-slate-400 flex items-center gap-1.5">
                 <Wallet size={14} className="text-amber-400" />
-                <span>ทุนในพอร์ต Exness:</span>
+                <span>ทุนในพอร์ต Exness จริง:</span>
               </span>
               <button 
                 onClick={() => handleSyncExness()}
@@ -221,11 +223,16 @@ export default function ExnessWebTrading() {
                 {isSyncing ? 'กำลังดึงยอด...' : 'รีเฟรชยอด'}
               </button>
             </div>
-            <div className="font-mono text-2xl font-extrabold text-white">
-              ฿{capital.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            <div className="flex items-baseline gap-2">
+              <span className="font-mono text-2xl font-extrabold text-white">
+                {capital.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-sm font-bold text-amber-400">USC</span>
+              </span>
+              <span className="font-mono text-xs text-slate-400">
+                (≈ ${usdValue} USD)
+              </span>
             </div>
             <div className="text-[11px] text-slate-400 flex justify-between">
-              <span>Free Margin: <strong className="text-emerald-400 font-mono">฿{capital.toLocaleString()}</strong></span>
+              <span>Free Margin: <strong className="text-emerald-400 font-mono">{capital.toLocaleString()} USC</strong></span>
               <span>Leverage: <strong className="text-white font-mono">1:2000</strong></span>
             </div>
           </div>
@@ -314,7 +321,7 @@ export default function ExnessWebTrading() {
           <div className="flex gap-2">
             <input
               type="number"
-              placeholder="พิมพ์ยอดเงินจริงจาก Exness เช่น 9995..."
+              placeholder="พิมพ์ยอดเงินจริงจาก Exness เช่น 1017 (USC)..."
               value={balanceInput}
               onChange={(e) => setBalanceInput(e.target.value)}
               className="flex-1 bg-slate-950 border border-slate-700 focus:border-blue-500 rounded-lg px-3 py-2 text-xs text-white font-mono outline-none"
@@ -331,7 +338,7 @@ export default function ExnessWebTrading() {
               className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-md shadow-blue-600/30"
             >
               <RefreshCw size={13} className={isSyncing ? 'animate-spin' : ''} />
-              <span>ซิงค์ยอดเงินนี้ทันที</span>
+              <span>ซิงค์ยอดเงินนี้ทันที (1,017.00 USC)</span>
             </button>
           </div>
         </div>

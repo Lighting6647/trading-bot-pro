@@ -80,15 +80,15 @@ export default function SidebarLeft() {
           <div className="text-[11px] space-y-1 text-slate-300 mb-2">
             <div className="flex justify-between">
               <span className="text-slate-400">เซิร์ฟเวอร์:</span>
-              <span className="font-mono text-slate-200">Exness-Real19</span>
+              <span className="font-mono text-slate-200">Exness-MT5Real</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-400">บัญชี:</span>
-              <span className="font-mono text-slate-200">EXN-7739210</span>
+              <span className="font-mono text-slate-200"># 160187619</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-400">ยอดเงินจริง:</span>
-              <span className="font-mono text-emerald-400 font-bold">฿{capital.toLocaleString()}</span>
+              <span className="font-mono text-emerald-400 font-bold">{capital.toLocaleString()} USC</span>
             </div>
           </div>
           <div className="flex gap-1.5">

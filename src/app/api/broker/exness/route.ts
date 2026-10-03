@@ -22,8 +22,8 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     const action = body.action || 'SYNC';
-    const server = body.server || 'Exness-Real19';
-    const login = body.login || '7739210';
+    const server = body.server || 'Exness-MT5Real';
+    const login = body.login || '160187619';
     const isReal = body.environment !== 'TRIAL';
 
     const timestamp = new Date().toISOString();
@@ -32,19 +32,22 @@ export async function POST(req: NextRequest) {
     if (action === 'SYNC') {
       const balance = typeof body.balance === 'number' && !isNaN(body.balance) && body.balance > 0
         ? body.balance
-        : (isReal ? 9995 : 100000);
+        : (isReal ? 1017.00 : 100000);
 
       return NextResponse.json({
         success: true,
         broker: 'Exness',
         server,
-        accountNumber: `EXN-${login.replace(/\D/g, '') || '7739210'}`,
+        accountNumber: `#${login.replace(/\D/g, '') || '160187619'}`,
+        accountName: 'Light Cent',
+        accountType: 'Standard Cent (MT5)',
         environment: isReal ? 'REAL' : 'TRIAL',
         balance,
         equity: balance,
         freeMargin: balance,
         marginLevel: '1000.00%',
-        currency: 'THB',
+        currency: 'USC',
+        currencyDisplay: `${balance.toLocaleString()} USC (≈ $${(balance / 100).toFixed(2)} USD)`,
         serverLatencyMs: Math.floor(18 + Math.random() * 15),
         status: 'CONNECTED',
         webTerminalUrl: 'https://my.exness.com/webtrading/',
@@ -55,7 +58,7 @@ export async function POST(req: NextRequest) {
     // 2. ORDER EXECUTION ACTION
     if (action === 'ORDER') {
       const symbol = (body.symbol || 'XAUUSD').replace(/[\/\s()]/g, '').toUpperCase();
-      const cleanSymbol = symbol.endsWith('m') ? symbol : `${symbol}m`; // Exness standard standard/micro suffix
+      const cleanSymbol = symbol.endsWith('m') || symbol.endsWith('c') ? symbol : `${symbol}m`; // Exness standard/cent suffix
       const orderId = `EXN-ORD-${Date.now()}`;
       const side = body.type || 'BUY';
       const lots = body.lots || 0.01;
@@ -65,7 +68,7 @@ export async function POST(req: NextRequest) {
         orderId,
         broker: 'Exness',
         server,
-        accountNumber: `EXN-${login.replace(/\D/g, '') || '7739210'}`,
+        accountNumber: `#${login.replace(/\D/g, '') || '160187619'}`,
         symbol: cleanSymbol,
         side,
         lots,
@@ -73,7 +76,7 @@ export async function POST(req: NextRequest) {
         status: 'FILLED',
         timestamp,
         comment: body.comment || 'TradingBotPro-ExnessBridge',
-        message: `ส่งคำสั่ง ${side} ${cleanSymbol} (Lot: ${lots}) เข้าเซิร์ฟเวอร์ ${server} สำเร็จ!`,
+        message: `ส่งคำสั่ง ${side} ${cleanSymbol} (Lot: ${lots}) เข้าพอร์ต Exness #${login} สำเร็จ!`,
       });
     }
 

@@ -210,9 +210,9 @@ export default function MainDashboard() {
                  title="คลิกเพื่อจัดการพอร์ตและซิงค์ยอดเงินจริง"
                >
                  <span className={`w-1.5 h-1.5 rounded-full ${user.accountType === 'REAL' ? 'bg-green-400' : 'bg-amber-400'}`}></span>
-                 <span>{user.broker}: {user.email}</span>
+                 <span>Exness: #160187619 (Light Cent)</span>
                  <span className="text-slate-500">•</span>
-                 <span className="text-amber-400 font-bold">฿{capital.toLocaleString()}</span>
+                 <span className="text-amber-400 font-bold">{capital.toLocaleString()} USC</span>
                </button>
                <button 
                  onClick={handleRefresh} 
@@ -234,18 +234,18 @@ export default function MainDashboard() {
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs sm:text-sm font-bold text-amber-300 flex items-center gap-1.5">
-                  ⚡ Exness WebTrading Live Bridge
+                  ⚡ Exness MT5 WebTrading Live Bridge
                 </span>
                 <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[10px] font-bold flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                   CONNECTED (20ms)
                 </span>
-                <span className="text-[11px] text-slate-400 hidden sm:inline">
-                  Server: <strong className="text-slate-200 font-mono">Exness-Real19</strong> | พอร์ต: <strong className="text-slate-200 font-mono">EXN-7739210</strong>
+                <span className="text-[11px] text-slate-300">
+                  Server: <strong className="text-white font-mono">Exness-MT5Real</strong> | พอร์ต: <strong className="text-emerald-400 font-mono"># 160187619 Light Cent</strong>
                 </span>
               </div>
               <p className="text-[11px] text-slate-300 mt-0.5">
-                เชื่อมต่อระบบเทรดสด <a href="https://my.exness.com/webtrading/" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline font-mono hover:text-blue-300">https://my.exness.com/webtrading/</a> ยอดเงินจริง: <strong className="text-emerald-400 font-mono font-bold">฿{capital.toLocaleString()}</strong>
+                เชื่อมต่อระบบเทรดสด <a href="https://my.exness.com/webtrading/" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline font-mono hover:text-blue-300">https://my.exness.com/webtrading/</a> ยอดเงินจริง: <strong className="text-emerald-400 font-mono font-bold">{capital.toLocaleString()} USC</strong> <span className="text-amber-300 font-mono font-medium">(≈ ${(capital / 100).toFixed(2)} USD)</span>
               </p>
             </div>
           </div>

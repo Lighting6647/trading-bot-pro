@@ -191,7 +191,7 @@ type TradingContextType = {
   // Real Broker Live API
   brokerLiveState: LiveBrokerState;
   setBrokerLiveState: React.Dispatch<React.SetStateAction<LiveBrokerState>>;
-  syncLiveBrokerAccount: (customCreds?: Partial<LiveBrokerState>) => Promise<boolean>;
+  syncLiveBrokerAccount: (customCreds?: Partial<LiveBrokerState> & { customBalance?: number }) => Promise<boolean>;
   executeLiveBrokerOrder: (order: { symbol: string; side: 'BUY' | 'SELL'; amount: number }) => Promise<boolean>;
 
   // User Account & Login
@@ -571,9 +571,13 @@ export function TradingProvider({ children }: { children: ReactNode }) {
   }, [user.accountType, addNotification]);
 
   // Live Broker API Sync
-  const syncLiveBrokerAccount = useCallback(async (customCreds?: Partial<LiveBrokerState>): Promise<boolean> => {
+  const syncLiveBrokerAccount = useCallback(async (customCreds?: Partial<LiveBrokerState> & { customBalance?: number }): Promise<boolean> => {
     try {
       const credsToUse = { ...brokerLiveState, ...customCreds };
+      const balanceToSend = customCreds?.customBalance !== undefined 
+        ? customCreds.customBalance 
+        : (user.accountType === 'REAL' ? realCapital : demoCapital);
+
       const res = await fetch('/api/broker/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -585,6 +589,7 @@ export function TradingProvider({ children }: { children: ReactNode }) {
           server: user.server || credsToUse.serverOrPassphrase,
           webhookUrl: credsToUse.webhookUrl,
           accountNumber: user.accountNumber,
+          customBalance: balanceToSend,
         }),
       });
 

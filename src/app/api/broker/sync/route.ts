@@ -12,6 +12,7 @@ export async function POST(req: NextRequest) {
       serverOrPassphrase: body?.serverOrPassphrase || body?.server,
       webhookUrl: body?.webhookUrl,
       accountNumber: body?.accountNumber,
+      customBalance: typeof body?.customBalance === 'number' ? body.customBalance : (typeof body?.balance === 'number' ? body.balance : undefined),
     };
 
     const accountInfo = await syncBrokerAccount(cred);

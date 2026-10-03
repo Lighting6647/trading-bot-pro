@@ -10,6 +10,7 @@ export type BrokerCredentials = {
   serverOrPassphrase?: string;
   webhookUrl?: string;
   accountNumber?: string;
+  customBalance?: number;
 };
 
 export type BrokerAccountInfo = {
@@ -247,15 +248,19 @@ async function syncMetaTrader(cred: BrokerCredentials): Promise<BrokerAccountInf
 
   // Direct Live Server Bridge Simulation / Fallback
   const latency = Math.floor(18 + Math.random() * 25);
+  const targetBalance = typeof cred.customBalance === 'number' && !isNaN(cred.customBalance) && cred.customBalance > 0
+    ? cred.customBalance
+    : (cred.environment === 'LIVE' ? 10000 : 100000);
+
   return {
     success: true,
     broker: cred.broker,
     environment: cred.environment,
-    balance: cred.environment === 'LIVE' ? 10000 : 100000,
-    equity: cred.environment === 'LIVE' ? 10000 : 100000,
+    balance: targetBalance,
+    equity: targetBalance,
     currency: 'THB',
     unrealizedPnl: 0,
-    marginAvailable: cred.environment === 'LIVE' ? 10000 : 100000,
+    marginAvailable: targetBalance,
     serverLatencyMs: latency,
     connectedAt: new Date().toISOString(),
     accountNumber: cred.accountNumber || (cred.broker === 'Exness' ? 'EXN-7739210' : 'MT5-9928114'),

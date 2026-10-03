@@ -679,16 +679,21 @@ export default function AccountModal() {
                   onClick={async () => {
                     setIsConnecting(true);
                     setApiTestResult(null);
+                    const parsed = parseFloat(customBalance.replace(/,/g, ''));
                     const success = await syncLiveBrokerAccount({
                       apiKey,
                       apiSecret,
                       webhookUrl,
                       environment: targetType === 'REAL' ? 'LIVE' : 'PAPER',
+                      customBalance: !isNaN(parsed) && parsed > 0 ? parsed : undefined,
                     });
                     setIsConnecting(false);
+                    const balText = !isNaN(parsed) && parsed > 0 ? ` (ยอดทุน: ฿${parsed.toLocaleString()})` : '';
                     setApiTestResult({
                       success,
-                      message: success ? `เชื่อมต่อ ${broker} สำเร็จ!` : `เชื่อมต่อ ${broker} ไม่สำเร็จ ตรวจสอบ API Key`,
+                      message: success 
+                        ? `เชื่อมต่อ ${broker} สำเร็จ!${balText}` 
+                        : `เชื่อมต่อ ${broker} ไม่สำเร็จ ตรวจสอบ API Key หรือ Server`,
                     });
                   }}
                   className="w-full py-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/40 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"

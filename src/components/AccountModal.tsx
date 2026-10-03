@@ -21,7 +21,8 @@ import {
   RefreshCw,
   RotateCcw,
   Edit3,
-  Zap
+  Zap,
+  ArrowLeft
 } from 'lucide-react';
 import { useTrading } from '@/context/TradingContext';
 
@@ -155,14 +156,24 @@ export default function AccountModal() {
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
       <div className="bg-[#0f172a] border border-blue-500/50 rounded-xl max-w-md w-full shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-[#1e293b] px-5 py-3.5 border-b border-slate-700 flex justify-between items-center">
-          <div className="flex items-center gap-2.5 text-blue-400 font-bold text-sm md:text-base">
-            <User size={18} />
-            <span>บัญชีและการเข้าสู่ระบบ (Account & Login)</span>
+        <div className="bg-[#1e293b] px-4 py-3 border-b border-slate-700 flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setIsLoginModalOpen(false)}
+              className="flex items-center gap-1 text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-2 py-1 rounded text-xs border border-slate-700 cursor-pointer transition-colors"
+            >
+              <ArrowLeft size={13} />
+              <span>กลับ</span>
+            </button>
+            <div className="flex items-center gap-2 text-blue-400 font-bold text-xs sm:text-sm">
+              <User size={16} />
+              <span>บัญชี & การเข้าสู่ระบบ</span>
+            </div>
           </div>
           <button 
             onClick={() => setIsLoginModalOpen(false)}
             className="text-slate-400 hover:text-white p-1 rounded-md hover:bg-slate-700/50 cursor-pointer"
+            title="ปิด"
           >
             <X size={18} />
           </button>
@@ -445,6 +456,14 @@ export default function AccountModal() {
               {/* Actions */}
               <div className="flex gap-2 pt-2">
                 <button
+                  type="button"
+                  onClick={() => setIsLoginModalOpen(false)}
+                  className="py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer border border-slate-700"
+                >
+                  <ArrowLeft size={13} />
+                  <span>กลับ</span>
+                </button>
+                <button
                   onClick={() => setActiveTab('login')}
                   className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                 >
@@ -453,10 +472,10 @@ export default function AccountModal() {
                 </button>
                 <button
                   onClick={logout}
-                  className="py-2 px-4 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  className="py-2 px-3 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <LogOut size={14} />
-                  <span>ออกจากระบบ</span>
+                  <span>ออก</span>
                 </button>
               </div>
             </div>
@@ -620,12 +639,20 @@ export default function AccountModal() {
                 </button>
               </div>
 
-              {/* Submit Button */}
-              <div className="pt-2">
+              {/* Submit & Back Buttons */}
+              <div className="pt-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsLoginModalOpen(false)}
+                  className="py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer border border-slate-700"
+                >
+                  <ArrowLeft size={13} />
+                  <span>กลับ</span>
+                </button>
                 <button
                   type="submit"
                   disabled={isConnecting}
-                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-md shadow-blue-600/30"
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-md shadow-blue-600/30"
                 >
                   {isConnecting ? (
                     <span>กำลังเชื่อมต่อ API...</span>

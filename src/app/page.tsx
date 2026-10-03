@@ -30,7 +30,8 @@ import {
   Activity, 
   BarChart2, 
   Play, 
-  Square 
+  Square,
+  ArrowLeft 
 } from "lucide-react";
 
 const panelComponents: Record<string, React.ComponentType> = {
@@ -224,6 +225,28 @@ export default function Home() {
           ${mobileView === 'panel' ? 'flex flex-1' : 'hidden'} 
           md:flex flex-1 flex-col min-h-0 h-full overflow-hidden relative gsap-active-panel
         `}>
+          {/* Back to Main Dashboard button banner when inside any sub-menu */}
+          {activePanel !== 'แดชบอร์ด' && (
+            <div className="bg-[#111827] border-b border-blue-500/30 px-3 py-1.5 flex items-center justify-between shrink-0 z-20 shadow-xs">
+              <button
+                onClick={() => {
+                  setActivePanel('แดชบอร์ด');
+                  setMobileView('panel');
+                }}
+                className="flex items-center gap-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 px-3 py-1 rounded-lg transition-all cursor-pointer shadow-sm shadow-blue-600/30 active:scale-95 border border-blue-400/40"
+              >
+                <ArrowLeft size={14} />
+                <span>← กลับหน้าหลัก (แดชบอร์ด)</span>
+              </button>
+              <div className="flex items-center gap-2 text-xs text-slate-300">
+                <span className="text-slate-400">เมนูปัจจุบัน:</span>
+                <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 font-medium">
+                  {activePanel}
+                </span>
+              </div>
+            </div>
+          )}
+
           <ActiveComponent />
           <SettingsModal />
           <AccountModal />

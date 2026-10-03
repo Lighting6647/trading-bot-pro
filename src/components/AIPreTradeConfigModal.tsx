@@ -18,7 +18,8 @@ import {
   Clock,
   Flame,
   HelpCircle,
-  ArrowRight
+  ArrowRight,
+  ArrowLeft
 } from "lucide-react";
 import { useTrading, AIAutoTradeConfig } from "@/context/TradingContext";
 import { calculatePreview } from "@/lib/strategy";
@@ -73,26 +74,33 @@ export default function AIPreTradeConfigModal() {
       <div className="bg-[#0c1222] border border-blue-500/50 rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
         
         {/* Header */}
-        <div className="bg-gradient-to-r from-[#131b2f] via-[#1a2542] to-[#131b2f] px-5 py-3.5 border-b border-slate-700/80 flex justify-between items-center shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-600/30 border border-blue-500/50 flex items-center justify-center text-blue-400">
-              <Brain size={18} className="animate-pulse" />
-            </div>
-            <div>
-              <div className="font-bold text-sm sm:text-base text-white flex items-center gap-2">
-                <span>ตั้งค่าความต้องการ AI ก่อนเทรดจริง</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-mono">
-                  Pre-Trade Setup
-                </span>
+        <div className="bg-gradient-to-r from-[#131b2f] via-[#1a2542] to-[#131b2f] px-4 sm:px-5 py-3 border-b border-slate-700/80 flex justify-between items-center shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <button
+              onClick={() => setIsAiConfigModalOpen(false)}
+              className="flex items-center gap-1 text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded-lg text-xs border border-slate-700 cursor-pointer transition-colors"
+            >
+              <ArrowLeft size={14} />
+              <span>กลับ</span>
+            </button>
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-blue-600/30 border border-blue-500/50 flex items-center justify-center text-blue-400">
+                <Brain size={16} className="animate-pulse" />
               </div>
-              <div className="text-[11px] text-slate-400">
-                กำหนดกติกา กลยุทธ์ และเป้าหมาย เพื่อให้ AI ออกออเดอร์อย่างปลอดภัยและแม่นยำ
+              <div>
+                <div className="font-bold text-xs sm:text-sm text-white flex items-center gap-1.5">
+                  <span>ตั้งค่า AI ก่อนเทรด</span>
+                  <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-mono">
+                    Setup
+                  </span>
+                </div>
               </div>
             </div>
           </div>
           <button
             onClick={() => setIsAiConfigModalOpen(false)}
             className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+            title="ปิด"
           >
             <X size={18} />
           </button>
@@ -587,18 +595,44 @@ export default function AIPreTradeConfigModal() {
           <div className="flex items-center gap-2">
             <button
               type="button"
+              onClick={() => setIsAiConfigModalOpen(false)}
+              className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1 border border-slate-700"
+            >
+              <ArrowLeft size={13} />
+              <span>← ปิด / กลับ</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => {
                 setDraft({ ...aiConfig });
                 addNotification('signal', '🔄 รีเซ็ตค่าการตั้งค่า AI กลับเป็นค่ามาตรฐาน');
               }}
-              className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition-colors cursor-pointer flex items-center gap-1"
+              className="hidden sm:flex px-2.5 py-2 rounded-lg bg-slate-800/60 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-xs transition-colors cursor-pointer items-center gap-1"
             >
-              <RotateCcw size={13} />
+              <RotateCcw size={12} />
               <span>คืนค่าเดิม</span>
             </button>
           </div>
 
           <div className="flex items-center gap-2">
+            {activeTab !== 'signals' && (
+              <button
+                type="button"
+                onClick={() => {
+                  const tabs: Array<'signals' | 'money' | 'risk' | 'summary'> = ['signals', 'money', 'risk', 'summary'];
+                  const currentIndex = tabs.indexOf(activeTab);
+                  if (currentIndex > 0) {
+                    setActiveTab(tabs[currentIndex - 1]);
+                  }
+                }}
+                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-medium transition-colors cursor-pointer flex items-center gap-1 border border-slate-700"
+              >
+                <ArrowLeft size={13} />
+                <span>ย้อนกลับ</span>
+              </button>
+            )}
+
             {activeTab !== 'summary' ? (
               <button
                 type="button"
@@ -618,10 +652,10 @@ export default function AIPreTradeConfigModal() {
               <button
                 type="button"
                 onClick={handleStartTrading}
-                className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-600/30"
+                className="px-5 py-2 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-600/30"
               >
-                <Play size={15} fill="currentColor" />
-                <span>🚀 บันทึกและเริ่มให้ AI เทรดทันที</span>
+                <Play size={14} fill="currentColor" />
+                <span>🚀 บันทึกและเริ่ม AI เทรด</span>
               </button>
             )}
           </div>

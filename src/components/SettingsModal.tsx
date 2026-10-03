@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, X, Info } from 'lucide-react';
+import { Settings as SettingsIcon, X, Info, ArrowLeft } from 'lucide-react';
 import { useTrading } from '@/context/TradingContext';
 import { calculatePreview } from '@/lib/strategy';
 
@@ -42,15 +42,30 @@ export default function SettingsModal() {
   };
 
   return (
-    <div className="absolute top-2 left-1/2 -translate-x-1/2 md:translate-x-0 md:left-2 bottom-2 w-[95%] md:w-[420px] bg-[#0a0f1c] border border-blue-500/50 rounded-lg shadow-2xl flex flex-col z-20 overflow-hidden">
+    <div className="absolute top-2 left-1/2 -translate-x-1/2 md:translate-x-0 md:left-2 bottom-2 w-[95%] md:w-[420px] bg-[#0a0f1c] border border-blue-500/50 rounded-lg shadow-2xl flex flex-col z-30 overflow-hidden">
       {/* Header */}
-      <div className="h-10 bg-[#131b2f] border-b border-slate-800 flex justify-between items-center px-4 cursor-move">
-        <div className="flex items-center gap-2 text-slate-300 text-sm font-semibold">
-          <SettingsIcon size={16} className="text-amber-400" />
-          <span>ตั้งค่าระบบ (System Settings)</span>
+      <div className="h-10 bg-[#131b2f] border-b border-slate-800 flex justify-between items-center px-3 cursor-move">
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={handleCancel} 
+            className="flex items-center gap-1 text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-2 py-0.5 rounded text-xs border border-slate-700 cursor-pointer transition-colors"
+          >
+            <ArrowLeft size={13} />
+            <span>กลับ</span>
+          </button>
+          <div className="flex items-center gap-1.5 text-slate-200 text-xs sm:text-sm font-semibold">
+            <SettingsIcon size={15} className="text-amber-400" />
+            <span>ตั้งค่าระบบ</span>
+          </div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={handleCancel} className="text-slate-400 hover:text-white cursor-pointer"><X size={16} /></button>
+          <button 
+            onClick={handleCancel} 
+            className="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800 cursor-pointer"
+            title="ปิดหน้าต่าง"
+          >
+            <X size={16} />
+          </button>
         </div>
       </div>
 
@@ -173,12 +188,13 @@ export default function SettingsModal() {
         </div>
 
         {/* Action */}
-        <div className="mt-auto pt-4 flex justify-end gap-2 border-t border-slate-800">
+        <div className="mt-auto pt-4 flex justify-between items-center gap-2 border-t border-slate-800">
            <button 
              onClick={handleCancel} 
-             className="px-4 py-1.5 text-slate-400 hover:text-slate-200 text-xs cursor-pointer transition-colors"
+             className="flex items-center gap-1 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded text-xs border border-slate-700 cursor-pointer transition-colors"
            >
-             ยกเลิก
+             <ArrowLeft size={13} />
+             <span>← กลับ / ยกเลิก</span>
            </button>
            <button 
              onClick={handleSave} 

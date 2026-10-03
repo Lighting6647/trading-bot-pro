@@ -1,6 +1,6 @@
 "use client";
 
-import { Wallet, Target, Activity, Clock, BarChart2 } from 'lucide-react';
+import { Wallet, Target, Activity, Clock, BarChart2, Sliders, Bot } from 'lucide-react';
 import { useTrading } from '@/context/TradingContext';
 import { calculatePreview } from '@/lib/strategy';
 import { useState, useEffect } from 'react';
@@ -15,7 +15,9 @@ export default function SidebarLeft() {
     takeProfitTarget,
     stopLossTarget,
     user,
-    setIsLoginModalOpen
+    setIsLoginModalOpen,
+    aiConfig,
+    setIsAiConfigModalOpen
   } = useTrading();
 
   const [mounted, setMounted] = useState(false);
@@ -63,6 +65,37 @@ export default function SidebarLeft() {
       </div>
 
       <div className="p-2 space-y-2">
+        {/* AI Pre-Trade Requirement Card */}
+        <div className="bg-gradient-to-br from-blue-950/40 to-slate-900 rounded-md border border-blue-800/40 p-2.5">
+          <div className="flex items-center justify-between mb-1.5">
+            <div className="flex items-center gap-1.5 text-blue-400 font-bold text-xs">
+              <Bot size={15} />
+              <span>AI Pre-Trade Rules</span>
+            </div>
+            <button
+              onClick={() => setIsAiConfigModalOpen(true)}
+              className="text-[10px] text-blue-400 hover:text-blue-200 font-medium flex items-center gap-1 bg-blue-500/20 hover:bg-blue-500/30 px-2 py-0.5 rounded border border-blue-500/40 transition-colors"
+            >
+              <Sliders size={10} />
+              ตั้งค่า
+            </button>
+          </div>
+          <div className="text-[11px] space-y-1 text-slate-300">
+            <div className="flex justify-between">
+              <span className="text-slate-400">คู่เทรด:</span>
+              <span className="font-semibold text-white">{aiConfig.selectedAsset.split(' ')[0]}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400">มั่นใจขั้นต่ำ:</span>
+              <span className="font-mono text-emerald-400 font-bold">≥ {aiConfig.minConfidence}%</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400">ไม้ละ:</span>
+              <span className="font-mono text-amber-400 font-bold">฿{aiConfig.baseOrderAmount.toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+
         {/* เงินทุน & เป้าหมาย */}
         <div className="bg-slate-950/50 rounded-md border border-slate-800">
           <div className="bg-slate-800/50 px-3 py-2 text-amber-400 font-semibold text-sm border-b border-slate-800 flex items-center justify-between">

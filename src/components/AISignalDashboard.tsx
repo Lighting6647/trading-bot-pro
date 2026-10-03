@@ -13,7 +13,9 @@ import {
   Activity, 
   Sparkles, 
   ShieldCheck, 
-  Info
+  Info,
+  Sliders,
+  Play
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -31,7 +33,9 @@ export default function AISignalDashboard() {
     aiAccuracy, 
     trades, 
     addNotification,
-    isAutoTrade
+    isAutoTrade,
+    aiConfig,
+    setIsAiConfigModalOpen
   } = useTrading();
 
   const [mounted, setMounted] = useState(false);
@@ -235,18 +239,54 @@ export default function AISignalDashboard() {
         </div>
 
         <div className="flex items-center gap-2 md:gap-3">
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-[#0a0f1c] border border-slate-800 text-xs font-mono text-slate-300">
+          <button
+            onClick={() => setIsAiConfigModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs shadow-md shadow-blue-500/20 transition-all border border-blue-400/30 cursor-pointer active:scale-95"
+            title="ตั้งค่าเงื่อนไขความต้องการก่อนให้ AI เริ่มเทรด"
+          >
+            <Sliders size={13} />
+            <span>⚙️ ตั้งค่าความต้องการ AI</span>
+          </button>
+
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#0a0f1c] border border-slate-800 text-xs font-mono text-slate-300">
             <Clock size={13} className="text-slate-400" />
-            <span>TF: {aiSignal?.timeframe || '5m'}</span>
+            <span>TF: {aiConfig?.timeframe || aiSignal?.timeframe || '5m'}</span>
           </div>
 
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-[#0a0f1c] border border-slate-800 text-xs">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#0a0f1c] border border-slate-800 text-xs">
             <div className={`w-2 h-2 rounded-full ${isAutoTrade ? 'bg-emerald-400 animate-ping' : 'bg-amber-400'}`}></div>
-            <span className="text-slate-300 font-medium">
+            <span className="text-slate-300 font-medium hidden sm:inline">
               {isAutoTrade ? 'AI Auto-Trading ON' : 'Manual Mode'}
             </span>
           </div>
         </div>
+      </div>
+
+      {/* Active AI Pre-Trade Rules Banner */}
+      <div className="bg-blue-950/30 border-b border-blue-800/40 px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <div className="flex items-center gap-2 flex-wrap text-slate-300">
+          <span className="text-blue-400 font-bold flex items-center gap-1">
+            <ShieldCheck size={14} className="text-blue-400" /> กฎ AI ปัจจุบัน:
+          </span>
+          <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 font-semibold">
+            {aiConfig?.selectedAsset || 'GOLD (XAU/USD)'}
+          </span>
+          <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+            มั่นใจขั้นต่ำ ≥ {aiConfig?.minConfidence || 80}%
+          </span>
+          <span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+            {aiConfig?.strategy || 'Anti-Martingale'} (ไม้ละ ฿{(aiConfig?.baseOrderAmount || 100).toLocaleString()})
+          </span>
+          <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+            TP: +฿{(aiConfig?.dailyTakeProfit || 3000).toLocaleString()} | SL: -฿{(aiConfig?.dailyStopLoss || 1500).toLocaleString()}
+          </span>
+        </div>
+        <button
+          onClick={() => setIsAiConfigModalOpen(true)}
+          className="text-blue-400 hover:text-blue-300 hover:underline font-medium text-[11px] cursor-pointer ml-auto"
+        >
+          แก้ไขความต้องการ ⚙️
+        </button>
       </div>
 
       {/* Action Notification Alert (Toast Banner) */}

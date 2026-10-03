@@ -10,6 +10,7 @@ import MainDashboard from "@/components/MainDashboard";
 import BottomBar from "@/components/BottomBar";
 import SettingsModal from "@/components/SettingsModal";
 import AccountModal from "@/components/AccountModal";
+import AIPreTradeConfigModal from "@/components/AIPreTradeConfigModal";
 import AISignalDashboard from "@/components/AISignalDashboard";
 import SmartRiskManager from "@/components/SmartRiskManager";
 import NotificationsPanel from "@/components/NotificationsPanel";
@@ -226,6 +227,7 @@ export default function Home() {
           <ActiveComponent />
           <SettingsModal />
           <AccountModal />
+          <AIPreTradeConfigModal />
         </div>
 
         {/* Right Sidebar (Desktop: always visible, Mobile: visible when 'orders' tab is active) */}

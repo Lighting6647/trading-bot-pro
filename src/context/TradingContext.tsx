@@ -113,6 +113,21 @@ export type UserAccount = {
   isLoggedIn: boolean;
 };
 
+export type AIAutoTradeConfig = {
+  minConfidence: number;
+  selectedAsset: string;
+  timeframe: string;
+  executionMode: 'FULL_AUTO' | 'SEMI_AUTO';
+  baseOrderAmount: number;
+  strategy: string;
+  maxSteps: number;
+  dailyTakeProfit: number;
+  dailyStopLoss: number;
+  maxConsecutiveLosses: number;
+  newsFilter: boolean;
+  autoStopOnTarget: boolean;
+};
+
 // ============ CONTEXT TYPE ============
 
 type TradingContextType = {
@@ -135,6 +150,13 @@ type TradingContextType = {
   resetSessionData: () => void;
   activePanel: string;
   setActivePanel: (v: string) => void;
+
+  // AI Pre-Trade Config
+  aiConfig: AIAutoTradeConfig;
+  setAiConfig: React.Dispatch<React.SetStateAction<AIAutoTradeConfig>>;
+  isAiConfigModalOpen: boolean;
+  setIsAiConfigModalOpen: (v: boolean) => void;
+  startAiTradingWithConfig: (cfg?: AIAutoTradeConfig) => void;
 
   // User Account & Login
   user: UserAccount;
@@ -219,9 +241,24 @@ type TradingContextType = {
 
 const defaultSettings: Settings = {
   strategy: 'Anti-Martingale',
-  startAmount: 40,
+  startAmount: 100,
   maxAmount: 20000,
   steps: 4,
+};
+
+export const defaultAiConfig: AIAutoTradeConfig = {
+  minConfidence: 80,
+  selectedAsset: 'GOLD (XAU/USD)',
+  timeframe: '5m',
+  executionMode: 'FULL_AUTO',
+  baseOrderAmount: 100,
+  strategy: 'Anti-Martingale',
+  maxSteps: 4,
+  dailyTakeProfit: 3000,
+  dailyStopLoss: 1500,
+  maxConsecutiveLosses: 3,
+  newsFilter: true,
+  autoStopOnTarget: true,
 };
 
 const defaultAchievements: Achievement[] = [
@@ -310,6 +347,10 @@ export function TradingProvider({ children }: { children: ReactNode }) {
   const [realTrades, setRealTrades] = useState<Trade[]>([]);
   const [demoTrades, setDemoTrades] = useState<Trade[]>([]);
 
+  // AI Pre-Trade Config
+  const [aiConfig, setAiConfig] = useState<AIAutoTradeConfig>(defaultAiConfig);
+  const [isAiConfigModalOpen, setIsAiConfigModalOpen] = useState(false);
+
   // LocalStorage Persistence
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -327,6 +368,8 @@ export function TradingProvider({ children }: { children: ReactNode }) {
       if (savedRealProfit) setRealProfit(Number(savedRealProfit));
       const savedRealTrades = localStorage.getItem('trading_real_trades');
       if (savedRealTrades) setRealTrades(JSON.parse(savedRealTrades));
+      const savedAiConfig = localStorage.getItem('trading_bot_ai_config');
+      if (savedAiConfig) setAiConfig(JSON.parse(savedAiConfig));
     } catch {}
   }, []);
 
@@ -337,8 +380,9 @@ export function TradingProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('trading_real_capital', realCapital.toString());
       localStorage.setItem('trading_real_profit', realProfit.toString());
       localStorage.setItem('trading_real_trades', JSON.stringify(realTrades));
+      localStorage.setItem('trading_bot_ai_config', JSON.stringify(aiConfig));
     } catch {}
-  }, [user, realCapital, realProfit, realTrades]);
+  }, [user, realCapital, realProfit, realTrades, aiConfig]);
 
   // Derived state based on active account type
   const isReal = user.accountType === 'REAL';
@@ -648,6 +692,33 @@ export function TradingProvider({ children }: { children: ReactNode }) {
     }, 1500);
   }, [settings.startAmount, addNotification]);
 
+  const startAiTradingWithConfig = useCallback((cfg?: AIAutoTradeConfig) => {
+    const activeCfg = cfg || aiConfig;
+    if (cfg) {
+      setAiConfig(cfg);
+    }
+    // Sync settings & targets to match user's pre-trade requirements
+    setSettings(prev => ({
+      ...prev,
+      startAmount: activeCfg.baseOrderAmount,
+      strategy: activeCfg.strategy,
+      steps: activeCfg.maxSteps,
+    }));
+    setTakeProfitTarget(activeCfg.dailyTakeProfit);
+    setStopLossTarget(activeCfg.dailyStopLoss);
+    setDailyLossLimit(activeCfg.dailyStopLoss);
+
+    // Turn on AI auto-trading
+    setIsRunning(true);
+    setIsAutoTrade(true);
+    setIsAiConfigModalOpen(false);
+
+    addNotification(
+      'signal',
+      `🚀 เริ่มรัน AI Auto-Trade: [${activeCfg.selectedAsset}] กลยุทธ์ ${activeCfg.strategy} | มั่นใจ ≥ ${activeCfg.minConfidence}% | ไม้ละ ฿${activeCfg.baseOrderAmount.toLocaleString()}`
+    );
+  }, [aiConfig, addNotification]);
+
   // ============ SIMULATION ============
 
   useEffect(() => {
@@ -665,68 +736,84 @@ export function TradingProvider({ children }: { children: ReactNode }) {
         'Support level bounce + Bullish divergence',
         'Trend continuation pattern detected',
       ];
+      const roundedConf = Math.round(newConfidence);
+
       setAiSignal({
         direction: newDirection as 'BUY' | 'SELL' | 'HOLD',
-        confidence: Math.round(newConfidence),
+        confidence: roundedConf,
         reason: reasons[Math.floor(Math.random() * reasons.length)],
-        timeframe: ['1m', '5m', '15m'][Math.floor(Math.random() * 3)],
+        timeframe: aiConfig.timeframe || '5m',
         timestamp: new Date().toISOString(),
       });
 
+      // Filter 1: Check HOLD
       if (newDirection === 'HOLD') return;
 
+      // Filter 2: Check Pre-Trade Config Min Confidence requirement
+      if (roundedConf < aiConfig.minConfidence) {
+        return; // Skip trade if below user's minimum confidence requirement
+      }
+
+      // Filter 3: Semi-Auto mode checks can require user approval, but in auto mode it executes
       const isWin = Math.random() > 0.47;
       const type = newDirection as 'BUY' | 'SELL';
       const prevTrades = tradesRef.current;
       const nextId = prevTrades.length > 0 ? prevTrades[0].id + 1 : 1;
+      const tradeAmount = aiConfig.baseOrderAmount || settings.startAmount;
 
       const newTrade: Trade = {
         id: nextId,
-        amount: settings.startAmount,
+        amount: tradeAmount,
         type,
         result: isWin ? 'WIN' : 'LOSE',
         time: new Date().toLocaleTimeString('en-US', { hour12: false }),
-        aiConfidence: Math.round(newConfidence),
+        aiConfidence: roundedConf,
         aiSignal: newDirection as 'BUY' | 'SELL',
+        note: `${aiConfig.selectedAsset} (${aiConfig.strategy})`,
+        tags: [aiConfig.selectedAsset.split(' ')[0], aiConfig.strategy],
       };
       
       setTrades(prev => [newTrade, ...prev].slice(0, 100));
-      const pnl = isWin ? settings.startAmount * 0.85 : -settings.startAmount;
+      const pnl = isWin ? tradeAmount * 0.85 : -tradeAmount;
       const newTotalProfit = profitRef.current + pnl;
       setProfit(newTotalProfit);
 
       // Handle win/loss consequences
       if (isWin) {
-        addNotification('win', `ชนะ! +${(settings.startAmount * 0.85).toFixed(0)} บาท (ไม้ที่ ${nextId})`);
+        addNotification('win', `ชนะ! +${(tradeAmount * 0.85).toFixed(0)} บาท [${aiConfig.selectedAsset}] (ไม้ที่ ${nextId})`);
         setConsecutiveLosses(0);
         addXp(50);
       } else {
-        addNotification('lose', `แพ้ -${settings.startAmount} บาท (ไม้ที่ ${nextId})`);
+        addNotification('lose', `แพ้ -${tradeAmount} บาท [${aiConfig.selectedAsset}] (ไม้ที่ ${nextId})`);
         const nextLossCount = consecutiveLossesRef.current + 1;
         setConsecutiveLosses(nextLossCount);
 
+        const maxLossRule = aiConfig.maxConsecutiveLosses || 3;
         if (nextLossCount >= 5) {
           setIsTiltDetected(true);
           addNotification('risk', '⚠️ ตรวจพบ Tilt Mode! แนะนำให้หยุดพักเทรดเพื่อควบคุมอารมณ์');
         }
 
-        if (nextLossCount >= 3) {
+        if (nextLossCount >= maxLossRule) {
           setIsCooldown(true);
           setCooldownSeconds(300);
-          addNotification('risk', '🛑 แพ้ 3 ไม้ติด → ระบบเปิด Cool-down พักเทรด 5 นาที');
+          addNotification('risk', `🛑 แพ้ ${maxLossRule} ไม้ติด (ตามกฎความเสี่ยงที่ตั้งไว้) → ระบบเปิด Cool-down พักเทรด 5 นาที`);
         }
       }
 
       // Check TP / SL Target limits
-      if (newTotalProfit >= takeProfitTarget) {
-        addNotification('target', `🎯 กำไรถึงเป้า TP Target (+${takeProfitTarget.toLocaleString()} ฿) เรียบร้อยแล้ว!`);
-        if (targetAction === 'stop') {
+      const tpTarget = aiConfig.dailyTakeProfit || takeProfitTarget;
+      const slTarget = aiConfig.dailyStopLoss || stopLossTarget;
+
+      if (newTotalProfit >= tpTarget) {
+        addNotification('target', `🎯 กำไรถึงเป้า TP Target (+${tpTarget.toLocaleString()} ฿) เรียบร้อยแล้ว!`);
+        if (targetAction === 'stop' || aiConfig.autoStopOnTarget) {
           setIsRunning(false);
           addNotification('risk', '🛑 ระบบหยุดเทรดอัตโนมัติตามเงื่อนไขเป้ากำไร');
         }
-      } else if (newTotalProfit <= -stopLossTarget) {
-        addNotification('target', `⚠️ ขาดทุนถึงจุดตัด SL Target (-${stopLossTarget.toLocaleString()} ฿)`);
-        if (targetAction === 'stop') {
+      } else if (newTotalProfit <= -slTarget) {
+        addNotification('target', `⚠️ ขาดทุนถึงจุดตัด SL Target (-${slTarget.toLocaleString()} ฿)`);
+        if (targetAction === 'stop' || aiConfig.autoStopOnTarget) {
           setIsRunning(false);
           addNotification('risk', '🛑 ระบบหยุดเทรดอัตโนมัติตามเงื่อนไขตัดขาดทุน');
         }
@@ -758,7 +845,7 @@ export function TradingProvider({ children }: { children: ReactNode }) {
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [isRunning, isAutoTrade, isCooldown, settings.startAmount, dailyLossLimit, takeProfitTarget, stopLossTarget, targetAction, addNotification, addXp]);
+  }, [isRunning, isAutoTrade, isCooldown, settings.startAmount, dailyLossLimit, takeProfitTarget, stopLossTarget, targetAction, addNotification, addXp, aiConfig]);
 
   // Cooldown countdown timer
   useEffect(() => {
@@ -790,6 +877,9 @@ export function TradingProvider({ children }: { children: ReactNode }) {
       profit, setProfit,
       syncBrokerBalance, resetSessionData,
       activePanel, setActivePanel,
+      aiConfig, setAiConfig,
+      isAiConfigModalOpen, setIsAiConfigModalOpen,
+      startAiTradingWithConfig,
       user, setUser,
       isLoginModalOpen, setIsLoginModalOpen,
       switchAccountType, login, logout,

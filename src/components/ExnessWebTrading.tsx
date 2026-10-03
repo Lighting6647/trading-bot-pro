@@ -19,7 +19,8 @@ import {
   Play,
   Layers,
   ArrowRight,
-  Activity
+  Activity,
+  Download
 } from 'lucide-react';
 import { useTrading } from '@/context/TradingContext';
 
@@ -652,6 +653,78 @@ export default function ExnessWebTrading() {
               <Zap size={14} className={isMetaApiLoading ? 'animate-spin' : ''} />
               <span>{isMetaApiLoading ? 'กำลังตรวจสอบและเชื่อมต่อ Cloud...' : '⚡ บันทึกและเชื่อมต่อ MetaApi Cloud ทันที'}</span>
             </button>
+          </div>
+        </div>
+
+        {/* 100% FREE MT5 Expert Advisor & Python Bot Downloads */}
+        <div className="bg-gradient-to-br from-emerald-950/40 via-slate-900 to-slate-950 p-4 sm:p-5 rounded-xl border border-emerald-500/50 space-y-4 shadow-xl">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+                <Download size={20} />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                  ดาวน์โหลดบอท MT5 ฟรี 100% (ไม่ต้องเสียเงินรายเดือน)
+                  <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">
+                    FREE 0 บาท ตลอดชีพ
+                  </span>
+                </h3>
+                <p className="text-[11px] text-slate-400">
+                  รันตรงในโปรแกรม MetaTrader 5 บนคอมพิวเตอร์ของคุณ ยิงออเดอร์เข้าพอร์ต #160187619 อัตโนมัติ 100%
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Option A: MQL5 Expert Advisor (.mq5) */}
+            <div className="bg-[#0b1322] p-4 rounded-xl border border-emerald-500/30 flex flex-col justify-between space-y-3">
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-emerald-400 text-xs flex items-center gap-1.5">
+                    <span>🤖 บอท Expert Advisor (TradingBotPro_AI.mq5)</span>
+                  </span>
+                  <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[9px] font-bold">แนะนำ</span>
+                </div>
+                <p className="text-[11px] text-slate-300 mt-2 leading-relaxed">
+                  นำไฟล์ไปวางในโฟลเดอร์ <code className="text-amber-300 bg-slate-900 px-1 py-0.5 rounded">MQL5/Experts</code> ใน MT5 แล้วกดเปิด Algo Trading บอทจะคอยคำนวณสูตร AI และยิงออเดอร์ในพอร์ตจริงทันที
+                </p>
+              </div>
+
+              <a
+                href="/TradingBotPro_AI.mq5"
+                download="TradingBotPro_AI.mq5"
+                className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 cursor-pointer transition-all"
+              >
+                <Download size={15} />
+                <span>📥 ดาวน์โหลด TradingBotPro_AI.mq5 (ฟรี)</span>
+              </a>
+            </div>
+
+            {/* Option B: Python MT5 Auto-Trader */}
+            <div className="bg-[#0b1322] p-4 rounded-xl border border-blue-500/30 flex flex-col justify-between space-y-3">
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-blue-400 text-xs flex items-center gap-1.5">
+                    <span>🐍 สคริปต์ Python Auto-Trader (exness_mt5_bot.py)</span>
+                  </span>
+                  <span className="px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-300 text-[9px] font-bold">Python</span>
+                </div>
+                <p className="text-[11px] text-slate-300 mt-2 leading-relaxed">
+                  รันคำสั่ง <code className="text-amber-300 bg-slate-900 px-1 py-0.5 rounded">python exness_mt5_bot.py</code> ในเครื่องคอมพิวเตอร์ เชื่อมต่อเข้าพอร์ต #160187619 อัตโนมัติ
+                </p>
+              </div>
+
+              <a
+                href="/exness_mt5_bot.py"
+                download="exness_mt5_bot.py"
+                className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 border border-blue-500/40 text-blue-300 hover:text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2 shadow-md cursor-pointer transition-all"
+              >
+                <Download size={15} />
+                <span>📥 ดาวน์โหลด exness_mt5_bot.py (ฟรี)</span>
+              </a>
+            </div>
           </div>
         </div>
 

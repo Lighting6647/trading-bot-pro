@@ -196,7 +196,7 @@ void OnTick()
                      (macd_main[0] > macd_signal[0] && macd_main[1] <= macd_signal[1]) &&
                      (ema_fast[0] > ema_slow[0]);
 
-   bool sellSignal = (rsi[0] >= InpOverbought || (rsi[0] < 55 && rsi[0] > 40)) &&
+   bool sellSignal = (rsi[0] >= InpRsiOverbought || (rsi[0] < 55 && rsi[0] > 40)) &&
                      (macd_main[0] < macd_signal[0] && macd_main[1] >= macd_signal[1]) &&
                      (ema_fast[0] < ema_slow[0]);
 

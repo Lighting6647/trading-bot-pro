@@ -22,11 +22,19 @@ import {
   ExternalLink,
   Zap,
   Globe,
-  ArrowRight
+  ArrowRight,
+  Volume2,
+  VolumeX,
+  Share2,
+  BarChart2,
+  Maximize2
 } from 'lucide-react';
 import { LineChart, Line, ResponsiveContainer, YAxis } from 'recharts';
 import { useTrading } from '@/context/TradingContext';
 import MarketTimezoneClock from '@/components/MarketTimezoneClock';
+import TradingViewChart from '@/components/TradingViewChart';
+import DailyPnLShareModal from '@/components/DailyPnLShareModal';
+import { soundFx } from '@/lib/soundFx';
 
 export default function MainDashboard() {
   const { 
@@ -60,15 +68,25 @@ export default function MainDashboard() {
   const [mounted, setMounted] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   
-  // Modals for the 2 buttons requested by user
+  // Modals for the buttons requested by user
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isSoundEnabled, setIsSoundEnabled] = useState(true);
+  const [showTradingView, setShowTradingView] = useState(true);
   const [copiedSummary, setCopiedSummary] = useState(false);
 
   // Local draft state for Target Modal
   const [draftTp, setDraftTp] = useState(takeProfitTarget);
   const [draftSl, setDraftSl] = useState(stopLossTarget);
   const [draftAction, setDraftAction] = useState(targetAction);
+
+  const toggleSound = () => {
+    const next = !isSoundEnabled;
+    setIsSoundEnabled(next);
+    soundFx.enabled = next;
+    if (next) soundFx.playSignal();
+  };
 
   const dashboardRef = useRef<HTMLDivElement>(null);
 
@@ -184,34 +202,55 @@ export default function MainDashboard() {
             รายงานราย Session
           </div>
           <div className="flex items-center gap-3 text-xs w-full sm:w-auto justify-between sm:justify-end">
-            {/* 2 Interactive Buttons requested by user */}
+            {/* Interactive Buttons */}
             <div className="flex bg-slate-900 rounded border border-slate-800 overflow-hidden shadow-inner">
                <button 
+                 onClick={() => setIsShareModalOpen(true)}
+                 className="px-2.5 py-1.5 border-r border-slate-800 flex items-center gap-1.5 text-amber-400 hover:text-amber-300 hover:bg-slate-800/80 active:bg-amber-600/30 transition-all font-medium cursor-pointer"
+                 title="สร้างการ์ดสรุปผลงานเทรดสำหรับแชร์"
+               >
+                 <Share2 size={13} className="text-amber-400" />
+                 <span>แชร์ผลงาน</span>
+               </button>
+               <button 
                  onClick={() => setIsPrintModalOpen(true)}
-                 className="px-3 py-1.5 border-r border-slate-800 flex items-center gap-1.5 text-blue-400 hover:text-blue-300 hover:bg-slate-800/80 active:bg-blue-600/30 transition-all font-medium"
+                 className="px-2.5 py-1.5 border-r border-slate-800 flex items-center gap-1.5 text-blue-400 hover:text-blue-300 hover:bg-slate-800/80 active:bg-blue-600/30 transition-all font-medium cursor-pointer"
                  title="พิมพ์รายงานสรุปกำไร / ส่งออกข้อมูล"
                >
-                 <TrendingUp size={14} className="text-blue-400" />
+                 <TrendingUp size={13} className="text-blue-400" />
                  <span>พิมพ์กำไร</span>
                </button>
                <button 
                  onClick={() => setIsTargetModalOpen(true)}
-                 className="px-3 py-1.5 flex items-center gap-1.5 text-green-400 hover:text-green-300 hover:bg-slate-800/80 active:bg-green-600/30 transition-all font-medium"
+                 className="px-2.5 py-1.5 flex items-center gap-1.5 text-green-400 hover:text-green-300 hover:bg-slate-800/80 active:bg-green-600/30 transition-all font-medium cursor-pointer"
                  title="ตั้งค่าเป้าหมายกำไรและตัดขาดทุน"
                >
                  <span>ตามเป้า/ตัดขาดทุน</span>
-                 <ChevronDown size={14} className="text-green-400 transition-transform hover:translate-y-0.5" />
+                 <ChevronDown size={13} className="text-green-400 transition-transform hover:translate-y-0.5" />
                </button>
             </div>
 
-            <div className="flex items-center gap-2 text-slate-400">
+            <div className="flex items-center gap-1.5 text-slate-400">
+               {/* Sound Toggle Button */}
+               <button
+                 onClick={toggleSound}
+                 className={`p-1.5 rounded border transition-colors cursor-pointer ${
+                   isSoundEnabled 
+                     ? 'bg-slate-800 text-amber-400 border-amber-500/30 hover:bg-slate-700' 
+                     : 'bg-slate-900 text-slate-500 border-slate-800 hover:text-slate-300'
+                 }`}
+                 title={isSoundEnabled ? 'เปิดเสียงแจ้งเตือน (คลิกเพื่อปิด)' : 'ปิดเสียงแจ้งเตือน (คลิกเพื่อเปิด)'}
+               >
+                 {isSoundEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
+               </button>
+
                <button
                  onClick={() => setIsLoginModalOpen(true)}
                  className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 hover:border-blue-500/40 text-[11px] font-mono text-slate-300 transition-colors cursor-pointer"
                  title="คลิกเพื่อจัดการพอร์ตและซิงค์ยอดเงินจริง"
                >
                  <span className={`w-1.5 h-1.5 rounded-full ${user.accountType === 'REAL' ? 'bg-green-400' : 'bg-amber-400'}`}></span>
-                 <span>Exness: #160187619 (Light Cent)</span>
+                 <span>Exness: #160187619</span>
                  <span className="text-slate-500">•</span>
                  <span className="text-amber-400 font-bold">{capital.toLocaleString()} USC</span>
                </button>
@@ -303,6 +342,27 @@ export default function MainDashboard() {
            <div className="text-lg font-mono font-bold text-slate-200">
               {(capital + profit).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ฿
            </div>
+        </div>
+
+        {/* Live Interactive TradingView Candlestick Chart */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setShowTradingView(!showTradingView)}
+              className="text-xs font-bold text-slate-300 hover:text-white flex items-center gap-1.5 cursor-pointer bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800"
+            >
+              <BarChart2 size={14} className="text-amber-400" />
+              <span>{showTradingView ? 'ซ่อนกราฟสด TradingView' : 'แสดงกราฟสด TradingView (Live Candle)'}</span>
+              <ChevronDown size={13} className={`transition-transform ${showTradingView ? 'rotate-180' : ''}`} />
+            </button>
+            <span className="text-[10px] text-slate-400 font-mono">XAU/USD • EUR/USD • Realtime Feed</span>
+          </div>
+
+          {showTradingView && (
+            <div className="gsap-chart-box">
+              <TradingViewChart height={340} symbol="OANDA:XAUUSD" />
+            </div>
+          )}
         </div>
 
         {/* Content Split */}
@@ -839,6 +899,12 @@ export default function MainDashboard() {
           </div>
         </div>
       )}
+
+      {/* Shareable Daily PnL Card Modal */}
+      <DailyPnLShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+      />
     </div>
   );
 }

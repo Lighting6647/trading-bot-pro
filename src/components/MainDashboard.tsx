@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { LineChart, Line, ResponsiveContainer, YAxis } from 'recharts';
 import { useTrading } from '@/context/TradingContext';
+import MarketTimezoneClock from '@/components/MarketTimezoneClock';
 
 export default function MainDashboard() {
   const { 
@@ -272,6 +273,9 @@ export default function MainDashboard() {
             </a>
           </div>
         </div>
+
+        {/* Global Market Status & Timezone Clocks */}
+        <MarketTimezoneClock />
         
         {/* AI Auto Trade Panel */}
         <div className="bg-[#131b2f] border border-slate-800 rounded p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">

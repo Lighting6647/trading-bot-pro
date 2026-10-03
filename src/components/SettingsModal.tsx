@@ -12,7 +12,15 @@ const strategies = [
 ];
 
 export default function SettingsModal() {
-  const { isSettingsOpen, setIsSettingsOpen, settings, setSettings, addNotification } = useTrading();
+  const { 
+    isSettingsOpen, 
+    setIsSettingsOpen, 
+    settings, 
+    setSettings, 
+    addNotification,
+    autoStopOnMarketClose,
+    setAutoStopOnMarketClose
+  } = useTrading();
   
   // Local draft state to allow cancelling
   const [draft, setDraft] = useState(settings);
@@ -169,23 +177,28 @@ export default function SettingsModal() {
            </div>
         </div>
 
-        {/* Preview */}
-        <div className="mb-4">
-           <div className="text-xs text-slate-400 mb-2">พรีวิวเงินแต่ละไม้ (คำนวณจากไม้ออร์เดอร์ + สูตร {draft.strategy})</div>
-           <div className="flex flex-wrap gap-2 text-xs font-mono">
-              {preview.map((amt, idx) => (
-                <div 
-                  key={idx}
-                  className={`px-2.5 py-1 rounded border ${
-                    idx === preview.length - 1 
-                      ? 'bg-amber-500/20 text-amber-400 border-amber-500/50 font-bold' 
-                      : 'bg-slate-900 text-slate-300 border-slate-700'
-                  }`}
-                >
-                  {idx + 1}: {amt.toLocaleString()}
-                </div>
-              ))}
-           </div>
+        {/* Market Timezone & Auto-Pause Settings */}
+        <div className="bg-slate-900/60 p-3 rounded-lg border border-slate-800 space-y-2 mb-4 text-xs">
+          <div className="font-semibold text-white flex items-center justify-between">
+            <span className="flex items-center gap-1.5 text-amber-400">
+              <span>🌐</span>
+              <span>การตั้งค่า Time Zone & เวลาปิดตลาด</span>
+            </span>
+          </div>
+          <div className="space-y-1.5 text-slate-300">
+            <label className="flex items-center justify-between p-2 rounded bg-slate-950/60 border border-slate-800 cursor-pointer">
+              <div>
+                <div className="font-medium text-slate-200">หยุดซื้อขายเมื่อตลาดปิด</div>
+                <div className="text-[10px] text-slate-400">หยุดส่งออเดอร์อัตโนมัติช่วงเสาร์-อาทิตย์ / Daily Break</div>
+              </div>
+              <input
+                type="checkbox"
+                checked={autoStopOnMarketClose}
+                onChange={(e) => setAutoStopOnMarketClose(e.target.checked)}
+                className="w-4 h-4 accent-blue-500 cursor-pointer"
+              />
+            </label>
+          </div>
         </div>
 
         {/* Action */}

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
+import { getMarketStatus } from '@/lib/marketHours';
 
 // ============ TYPES ============
 
@@ -271,6 +272,10 @@ type TradingContextType = {
   backtestResult: BacktestResult | null;
   runBacktest: (days: number) => void;
   isBacktesting: boolean;
+
+  // Market Hours & Auto-Pause on Closed Market
+  autoStopOnMarketClose: boolean;
+  setAutoStopOnMarketClose: (v: boolean) => void;
 };
 
 // ============ DEFAULTS & MOCK DATA ============
@@ -392,6 +397,9 @@ export function TradingProvider({ children }: { children: ReactNode }) {
   });
   const [isAiConfigModalOpen, setIsAiConfigModalOpen] = useState(false);
 
+  // Market Hours & Auto-Pause on Closed Market
+  const [autoStopOnMarketClose, setAutoStopOnMarketClose] = useState<boolean>(true);
+
   // Real Broker Live API
   const [brokerLiveState, setBrokerLiveState] = useState<LiveBrokerState>(defaultBrokerLiveState);
 
@@ -399,6 +407,9 @@ export function TradingProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
+      const savedAutoStop = localStorage.getItem('trading_auto_stop_market_close');
+      if (savedAutoStop !== null) setAutoStopOnMarketClose(savedAutoStop === 'true');
+
       const savedUser = localStorage.getItem('trading_user_account');
       if (savedUser) {
         const u = JSON.parse(savedUser);
@@ -444,8 +455,9 @@ export function TradingProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('trading_real_trades', JSON.stringify(realTrades));
       localStorage.setItem('trading_bot_ai_config', JSON.stringify(aiConfig));
       localStorage.setItem('trading_broker_live_state', JSON.stringify(brokerLiveState));
+      localStorage.setItem('trading_auto_stop_market_close', autoStopOnMarketClose.toString());
     } catch {}
-  }, [user, realCapital, realProfit, realTrades, aiConfig, brokerLiveState]);
+  }, [user, realCapital, realProfit, realTrades, aiConfig, brokerLiveState, autoStopOnMarketClose]);
 
   // Derived state based on active account type
   const isReal = user.accountType === 'REAL';
@@ -540,6 +552,7 @@ export function TradingProvider({ children }: { children: ReactNode }) {
   xpRef.current = xp;
   const consecutiveLossesRef = useRef(consecutiveLosses);
   consecutiveLossesRef.current = consecutiveLosses;
+  const lastMarketClosedAlertRef = useRef<number>(0);
 
   // ============ FUNCTIONS ============
 
@@ -574,7 +587,7 @@ export function TradingProvider({ children }: { children: ReactNode }) {
     setConsecutiveLosses(0);
     setIsCooldown(false);
     setIsTiltDetected(false);
-    addNotification('signal', `🔄 ซิงค์ยอดเงินบัญชีจริงจากโบรกเกอร์: ฿${newBalance.toLocaleString()}`);
+    addNotification('signal', `🔄 ซิงค์ยอดเงินบัญชีจริงจากโบรกเกอร์: ${newBalance.toLocaleString()} USC`);
   }, [user.accountType, addNotification]);
 
   const resetSessionData = useCallback(() => {
@@ -621,7 +634,7 @@ export function TradingProvider({ children }: { children: ReactNode }) {
           isLiveApiConnected: true,
           pingMs: data.serverLatencyMs || 25,
           lastSyncTime: new Date().toLocaleTimeString('th-TH'),
-          currency: data.currency || 'THB',
+          currency: data.currency || 'USC',
           equity: data.equity || data.balance,
           unrealizedPnl: data.unrealizedPnl || 0,
           marginAvailable: data.marginAvailable || data.balance,
@@ -637,7 +650,7 @@ export function TradingProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        addNotification('signal', `🟢 ซิงค์พอร์ตจริง ${user.broker} สำเร็จ! Latency: ${data.serverLatencyMs || 25}ms | ทุน: ฿${(data.balance || capital).toLocaleString()}`);
+        addNotification('signal', `🟢 ซิงค์พอร์ตจริง ${user.broker} สำเร็จ! Latency: ${data.serverLatencyMs || 25}ms | ทุน: ${(data.balance || capital).toLocaleString()} USC`);
         return true;
       } else {
         addNotification('risk', `⚠️ เชื่อมต่อพอร์ต ${user.broker} ไม่สำเร็จ: ${data?.error || 'กรุณาตรวจสอบ API Key'}`);
@@ -647,10 +660,19 @@ export function TradingProvider({ children }: { children: ReactNode }) {
       addNotification('risk', `❌ เกิดข้อผิดพลาดในการเชื่อมต่อ Broker API: ${err.message}`);
       return false;
     }
-  }, [brokerLiveState, user, capital, addNotification]);
+  }, [brokerLiveState, user, capital, realCapital, demoCapital, addNotification]);
 
   // Live Broker Order Execution
   const executeLiveBrokerOrder = useCallback(async (order: { symbol: string; side: 'BUY' | 'SELL'; amount: number }): Promise<boolean> => {
+    // Check if Market is Closed
+    if (autoStopOnMarketClose) {
+      const market = getMarketStatus(order.symbol);
+      if (!market.isOpen) {
+        addNotification('risk', `🛑 ปฏิเสธการส่งคำสั่ง: ตลาด ${order.symbol} ปิดทำการ (${market.statusText})`);
+        return false;
+      }
+    }
+
     try {
       const res = await fetch('/api/broker/order', {
         method: 'POST',
@@ -674,7 +696,7 @@ export function TradingProvider({ children }: { children: ReactNode }) {
     } catch {
       return false;
     }
-  }, [brokerLiveState, user]);
+  }, [brokerLiveState, user, autoStopOnMarketClose, addNotification]);
 
   const login = useCallback((data: { 
     email: string; 
@@ -898,6 +920,19 @@ export function TradingProvider({ children }: { children: ReactNode }) {
         timestamp: new Date().toISOString(),
       });
 
+      // Filter 0: Check Market Status & Auto-Stop when Market is Closed
+      if (autoStopOnMarketClose) {
+        const market = getMarketStatus(aiConfig.selectedAsset);
+        if (!market.isOpen) {
+          const now = Date.now();
+          if (now - lastMarketClosedAlertRef.current > 300000) { // Alert at most once per 5 minutes
+            lastMarketClosedAlertRef.current = now;
+            addNotification('risk', `🛑 ตลาด [${aiConfig.selectedAsset}] ปิดทำการ (${market.statusText}) ระบบหยุดส่งคำสั่งชั่วคราวอัตโนมัติ`);
+          }
+          return; // Pause auto-trade execution while market is closed
+        }
+      }
+
       // Filter 1: Check HOLD
       if (newDirection === 'HOLD') return;
 
@@ -1071,6 +1106,7 @@ export function TradingProvider({ children }: { children: ReactNode }) {
       timeframeAnalysis,
       chatMessages, sendChatMessage,
       backtestResult, runBacktest, isBacktesting,
+      autoStopOnMarketClose, setAutoStopOnMarketClose,
     }}>
       {children}
     </TradingContext.Provider>

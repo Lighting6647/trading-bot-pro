@@ -4,6 +4,7 @@ import { Wallet, Target, Activity, Clock, BarChart2, Sliders, Bot, Zap, External
 import { useTrading } from '@/context/TradingContext';
 import { calculatePreview } from '@/lib/strategy';
 import { useState, useEffect } from 'react';
+import MarketTimezoneClock from '@/components/MarketTimezoneClock';
 
 export default function SidebarLeft() {
   const { 
@@ -110,6 +111,9 @@ export default function SidebarLeft() {
             </a>
           </div>
         </div>
+
+        {/* Live Market Status & Timezone Clock (Compact) */}
+        <MarketTimezoneClock compact={true} />
 
         {/* AI Pre-Trade Requirement Card */}
         <div className="bg-gradient-to-br from-blue-950/40 to-slate-900 rounded-md border border-blue-800/40 p-2.5">

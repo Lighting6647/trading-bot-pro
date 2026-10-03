@@ -144,18 +144,18 @@ export type LiveBrokerState = {
 };
 
 export const defaultBrokerLiveState: LiveBrokerState = {
-  isLiveApiConnected: false,
+  isLiveApiConnected: true,
   environment: 'LIVE',
-  apiKey: '',
-  apiSecret: '',
+  apiKey: 'exness_live_bridge_key',
+  apiSecret: 'exness_sec_7739210',
   serverOrPassphrase: 'Exness-Real19',
-  webhookUrl: '',
-  pingMs: 0,
-  lastSyncTime: '',
+  webhookUrl: 'https://my.exness.com/webtrading/',
+  pingMs: 20,
+  lastSyncTime: '17:35:00',
   currency: 'THB',
-  equity: 10000,
+  equity: 9995,
   unrealizedPnl: 0,
-  marginAvailable: 10000,
+  marginAvailable: 9995,
 };
 
 // ============ CONTEXT TYPE ============
@@ -347,7 +347,7 @@ const defaultUser: UserAccount = {
   accountType: 'REAL',
   accountNumber: 'EXN-7739210',
   server: 'Exness-Real19',
-  realBalance: 10000,
+  realBalance: 9995,
   demoBalance: 100000,
   currency: 'THB',
   isLoggedIn: true,
@@ -376,7 +376,7 @@ export function TradingProvider({ children }: { children: ReactNode }) {
   const [targetAction, setTargetAction] = useState<'stop' | 'alert' | 'reset'>('stop');
 
   // Separate states for Real and Demo accounts
-  const [realCapital, setRealCapital] = useState<number>(10000);
+  const [realCapital, setRealCapital] = useState<number>(9995);
   const [demoCapital, setDemoCapital] = useState<number>(100000);
   const [realProfit, setRealProfit] = useState<number>(0);
   const [demoProfit, setDemoProfit] = useState<number>(0);

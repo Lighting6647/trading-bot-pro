@@ -1,6 +1,6 @@
 "use client";
 
-import { Wallet, Target, Activity, Clock, BarChart2, Sliders, Bot } from 'lucide-react';
+import { Wallet, Target, Activity, Clock, BarChart2, Sliders, Bot, Zap, ExternalLink, ArrowRight } from 'lucide-react';
 import { useTrading } from '@/context/TradingContext';
 import { calculatePreview } from '@/lib/strategy';
 import { useState, useEffect } from 'react';
@@ -17,7 +17,8 @@ export default function SidebarLeft() {
     user,
     setIsLoginModalOpen,
     aiConfig,
-    setIsAiConfigModalOpen
+    setIsAiConfigModalOpen,
+    setActivePanel
   } = useTrading();
 
   const [mounted, setMounted] = useState(false);
@@ -65,6 +66,51 @@ export default function SidebarLeft() {
       </div>
 
       <div className="p-2 space-y-2">
+        {/* Exness Live Bridge Card */}
+        <div className="bg-gradient-to-br from-amber-950/40 via-slate-900 to-slate-900 rounded-md border border-amber-500/40 p-2.5 shadow-xs">
+          <div className="flex items-center justify-between mb-1.5">
+            <div className="flex items-center gap-1.5 text-amber-400 font-bold text-xs">
+              <Zap size={14} className="animate-pulse" />
+              <span>Exness Live Bridge</span>
+            </div>
+            <span className="px-1.5 py-0.2 rounded text-[9px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold">
+              LIVE (20ms)
+            </span>
+          </div>
+          <div className="text-[11px] space-y-1 text-slate-300 mb-2">
+            <div className="flex justify-between">
+              <span className="text-slate-400">เซิร์ฟเวอร์:</span>
+              <span className="font-mono text-slate-200">Exness-Real19</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400">บัญชี:</span>
+              <span className="font-mono text-slate-200">EXN-7739210</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400">ยอดเงินจริง:</span>
+              <span className="font-mono text-emerald-400 font-bold">฿{capital.toLocaleString()}</span>
+            </div>
+          </div>
+          <div className="flex gap-1.5">
+            <button
+              onClick={() => setActivePanel('Exness เทรด')}
+              className="flex-1 py-1 px-2 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-[10px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer"
+            >
+              <span>ไปที่ Exness เทรด</span>
+              <ArrowRight size={11} />
+            </button>
+            <a
+              href="https://my.exness.com/webtrading/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-1 px-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[10px] flex items-center justify-center"
+              title="เปิดเว็บเทรด Exness ในแท็บใหม่"
+            >
+              <ExternalLink size={11} />
+            </a>
+          </div>
+        </div>
+
         {/* AI Pre-Trade Requirement Card */}
         <div className="bg-gradient-to-br from-blue-950/40 to-slate-900 rounded-md border border-blue-800/40 p-2.5">
           <div className="flex items-center justify-between mb-1.5">

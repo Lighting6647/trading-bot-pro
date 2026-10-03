@@ -108,6 +108,7 @@ export default function Home() {
         <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto py-0.5 flex-1 mr-2 scrollbar-none">
           {Object.keys(panelComponents).map((key) => {
             const isActive = activePanel === key;
+            const isExness = key === 'Exness เทรด';
             return (
               <button
                 key={key}
@@ -115,13 +116,23 @@ export default function Home() {
                   setActivePanel(key);
                   setMobileView('panel');
                 }}
-                className={`nav-tab-item px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs rounded-md whitespace-nowrap transition-all cursor-pointer font-medium shrink-0 ${
+                className={`nav-tab-item px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs rounded-md whitespace-nowrap transition-all cursor-pointer font-medium shrink-0 flex items-center gap-1.5 ${
                   isActive
-                    ? 'bg-blue-600/30 text-blue-400 border border-blue-500/60 shadow-xs'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 border border-transparent'
+                    ? isExness 
+                      ? 'bg-amber-500/30 text-amber-300 border border-amber-400 shadow-sm shadow-amber-500/20 font-bold'
+                      : 'bg-blue-600/30 text-blue-400 border border-blue-500/60 shadow-xs'
+                    : isExness
+                      ? 'bg-amber-950/40 text-amber-400 hover:bg-amber-900/50 border border-amber-500/40 hover:text-amber-200'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 border border-transparent'
                 }`}
               >
-                {key}
+                {isExness && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>}
+                <span>{key}</span>
+                {isExness && (
+                  <span className="px-1 py-0.2 text-[9px] bg-emerald-500/30 text-emerald-300 rounded font-mono font-bold">
+                    LIVE
+                  </span>
+                )}
                 {key === 'แจ้งเตือน' && unreadCount > 0 && (
                   <span className="ml-1 px-1.5 py-0.2 text-[9px] bg-red-500 text-white rounded-full font-bold animate-pulse">
                     {unreadCount}

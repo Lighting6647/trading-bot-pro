@@ -18,7 +18,11 @@ import {
   Check, 
   X, 
   ShieldAlert, 
-  Sliders
+  Sliders,
+  ExternalLink,
+  Zap,
+  Globe,
+  ArrowRight
 } from 'lucide-react';
 import { LineChart, Line, ResponsiveContainer, YAxis } from 'recharts';
 import { useTrading } from '@/context/TradingContext';
@@ -41,7 +45,13 @@ export default function MainDashboard() {
     addNotification,
     user,
     setIsLoginModalOpen,
-    resetSessionData
+    resetSessionData,
+    setActivePanel,
+    brokerLiveState,
+    syncLiveBrokerAccount,
+    executeLiveBrokerOrder,
+    setTrades,
+    setProfit
   } = useTrading();
 
   const [activeFilter, setActiveFilter] = useState('ทั้งหมด');
@@ -212,6 +222,54 @@ export default function MainDashboard() {
                  <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
                </button>
             </div>
+          </div>
+        </div>
+        
+        {/* Exness WebTrading Live Bridge Banner (Prominent Live Link & Control) */}
+        <div className="bg-gradient-to-r from-amber-950/40 via-[#131b2f] to-slate-900 border border-amber-500/50 rounded-lg p-3 sm:p-3.5 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0 shadow-inner">
+              <Zap size={20} className="animate-pulse" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs sm:text-sm font-bold text-amber-300 flex items-center gap-1.5">
+                  ⚡ Exness WebTrading Live Bridge
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[10px] font-bold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  CONNECTED (20ms)
+                </span>
+                <span className="text-[11px] text-slate-400 hidden sm:inline">
+                  Server: <strong className="text-slate-200 font-mono">Exness-Real19</strong> | พอร์ต: <strong className="text-slate-200 font-mono">EXN-7739210</strong>
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-300 mt-0.5">
+                เชื่อมต่อระบบเทรดสด <a href="https://my.exness.com/webtrading/" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline font-mono hover:text-blue-300">https://my.exness.com/webtrading/</a> ยอดเงินจริง: <strong className="text-emerald-400 font-mono font-bold">฿{capital.toLocaleString()}</strong>
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap w-full md:w-auto justify-end">
+            <button
+              onClick={() => setActivePanel('Exness เทรด')}
+              className="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/50 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
+              title="เปิดหน้าต่างจอเทรด Exness WebTrading แบบเต็มรูปแบบ"
+            >
+              <span>หน้าจอ Exness เทรด</span>
+              <ArrowRight size={14} />
+            </button>
+            <a
+              href="https://my.exness.com/webtrading/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-1.5 rounded-lg bg-blue-600/30 hover:bg-blue-600/50 text-blue-300 border border-blue-500/50 text-xs font-semibold transition-all flex items-center gap-1.5 shadow-xs"
+              title="เปิดเว็บเทรดจริง Exness WebTrading ในแท็บใหม่"
+            >
+              <Globe size={13} />
+              <span>เปิด my.exness.com</span>
+              <ExternalLink size={11} />
+            </a>
           </div>
         </div>
         

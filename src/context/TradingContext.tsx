@@ -128,6 +128,36 @@ export type AIAutoTradeConfig = {
   autoStopOnTarget: boolean;
 };
 
+export type LiveBrokerState = {
+  isLiveApiConnected: boolean;
+  environment: 'PAPER' | 'LIVE';
+  apiKey: string;
+  apiSecret: string;
+  serverOrPassphrase: string;
+  webhookUrl: string;
+  pingMs: number;
+  lastSyncTime: string;
+  currency: string;
+  equity: number;
+  unrealizedPnl: number;
+  marginAvailable: number;
+};
+
+export const defaultBrokerLiveState: LiveBrokerState = {
+  isLiveApiConnected: false,
+  environment: 'LIVE',
+  apiKey: '',
+  apiSecret: '',
+  serverOrPassphrase: 'Exness-Real19',
+  webhookUrl: '',
+  pingMs: 0,
+  lastSyncTime: '',
+  currency: 'THB',
+  equity: 10000,
+  unrealizedPnl: 0,
+  marginAvailable: 10000,
+};
+
 // ============ CONTEXT TYPE ============
 
 type TradingContextType = {
@@ -157,6 +187,12 @@ type TradingContextType = {
   isAiConfigModalOpen: boolean;
   setIsAiConfigModalOpen: (v: boolean) => void;
   startAiTradingWithConfig: (cfg?: AIAutoTradeConfig) => void;
+
+  // Real Broker Live API
+  brokerLiveState: LiveBrokerState;
+  setBrokerLiveState: React.Dispatch<React.SetStateAction<LiveBrokerState>>;
+  syncLiveBrokerAccount: (customCreds?: Partial<LiveBrokerState>) => Promise<boolean>;
+  executeLiveBrokerOrder: (order: { symbol: string; side: 'BUY' | 'SELL'; amount: number }) => Promise<boolean>;
 
   // User Account & Login
   user: UserAccount;
@@ -351,6 +387,9 @@ export function TradingProvider({ children }: { children: ReactNode }) {
   const [aiConfig, setAiConfig] = useState<AIAutoTradeConfig>(defaultAiConfig);
   const [isAiConfigModalOpen, setIsAiConfigModalOpen] = useState(false);
 
+  // Real Broker Live API
+  const [brokerLiveState, setBrokerLiveState] = useState<LiveBrokerState>(defaultBrokerLiveState);
+
   // LocalStorage Persistence
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -370,6 +409,8 @@ export function TradingProvider({ children }: { children: ReactNode }) {
       if (savedRealTrades) setRealTrades(JSON.parse(savedRealTrades));
       const savedAiConfig = localStorage.getItem('trading_bot_ai_config');
       if (savedAiConfig) setAiConfig(JSON.parse(savedAiConfig));
+      const savedBrokerLive = localStorage.getItem('trading_broker_live_state');
+      if (savedBrokerLive) setBrokerLiveState(JSON.parse(savedBrokerLive));
     } catch {}
   }, []);
 
@@ -381,8 +422,9 @@ export function TradingProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('trading_real_profit', realProfit.toString());
       localStorage.setItem('trading_real_trades', JSON.stringify(realTrades));
       localStorage.setItem('trading_bot_ai_config', JSON.stringify(aiConfig));
+      localStorage.setItem('trading_broker_live_state', JSON.stringify(brokerLiveState));
     } catch {}
-  }, [user, realCapital, realProfit, realTrades, aiConfig]);
+  }, [user, realCapital, realProfit, realTrades, aiConfig, brokerLiveState]);
 
   // Derived state based on active account type
   const isReal = user.accountType === 'REAL';
@@ -527,6 +569,86 @@ export function TradingProvider({ children }: { children: ReactNode }) {
     setIsTiltDetected(false);
     addNotification('signal', '🧹 รีเซ็ตข้อมูลรอบเทรดเป็น 0 เรียบร้อย พร้อมเริ่มเทรดใหม่');
   }, [user.accountType, addNotification]);
+
+  // Live Broker API Sync
+  const syncLiveBrokerAccount = useCallback(async (customCreds?: Partial<LiveBrokerState>): Promise<boolean> => {
+    try {
+      const credsToUse = { ...brokerLiveState, ...customCreds };
+      const res = await fetch('/api/broker/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          broker: user.broker,
+          environment: credsToUse.environment || (user.accountType === 'REAL' ? 'LIVE' : 'PAPER'),
+          apiKey: credsToUse.apiKey,
+          apiSecret: credsToUse.apiSecret,
+          server: user.server || credsToUse.serverOrPassphrase,
+          webhookUrl: credsToUse.webhookUrl,
+          accountNumber: user.accountNumber,
+        }),
+      });
+
+      const data = await res.json();
+      if (data && data.success) {
+        setBrokerLiveState(prev => ({
+          ...prev,
+          isLiveApiConnected: true,
+          pingMs: data.serverLatencyMs || 25,
+          lastSyncTime: new Date().toLocaleTimeString('th-TH'),
+          currency: data.currency || 'THB',
+          equity: data.equity || data.balance,
+          unrealizedPnl: data.unrealizedPnl || 0,
+          marginAvailable: data.marginAvailable || data.balance,
+        }));
+
+        if (typeof data.balance === 'number' && !isNaN(data.balance)) {
+          if (user.accountType === 'REAL') {
+            setRealCapital(data.balance);
+            setUser(prev => ({ ...prev, realBalance: data.balance }));
+          } else {
+            setDemoCapital(data.balance);
+            setUser(prev => ({ ...prev, demoBalance: data.balance }));
+          }
+        }
+
+        addNotification('signal', `🟢 ซิงค์พอร์ตจริง ${user.broker} สำเร็จ! Latency: ${data.serverLatencyMs || 25}ms | ทุน: ฿${(data.balance || capital).toLocaleString()}`);
+        return true;
+      } else {
+        addNotification('risk', `⚠️ เชื่อมต่อพอร์ต ${user.broker} ไม่สำเร็จ: ${data?.error || 'กรุณาตรวจสอบ API Key'}`);
+        return false;
+      }
+    } catch (err: any) {
+      addNotification('risk', `❌ เกิดข้อผิดพลาดในการเชื่อมต่อ Broker API: ${err.message}`);
+      return false;
+    }
+  }, [brokerLiveState, user, capital, addNotification]);
+
+  // Live Broker Order Execution
+  const executeLiveBrokerOrder = useCallback(async (order: { symbol: string; side: 'BUY' | 'SELL'; amount: number }): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/broker/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          broker: user.broker,
+          environment: brokerLiveState.environment || (user.accountType === 'REAL' ? 'LIVE' : 'PAPER'),
+          apiKey: brokerLiveState.apiKey,
+          apiSecret: brokerLiveState.apiSecret,
+          server: user.server,
+          webhookUrl: brokerLiveState.webhookUrl,
+          accountNumber: user.accountNumber,
+          symbol: order.symbol,
+          side: order.side,
+          amount: order.amount,
+        }),
+      });
+
+      const data = await res.json();
+      return !!(data && data.success);
+    } catch {
+      return false;
+    }
+  }, [brokerLiveState, user]);
 
   const login = useCallback((data: { 
     email: string; 
@@ -880,6 +1002,8 @@ export function TradingProvider({ children }: { children: ReactNode }) {
       aiConfig, setAiConfig,
       isAiConfigModalOpen, setIsAiConfigModalOpen,
       startAiTradingWithConfig,
+      brokerLiveState, setBrokerLiveState,
+      syncLiveBrokerAccount, executeLiveBrokerOrder,
       user, setUser,
       isLoginModalOpen, setIsLoginModalOpen,
       switchAccountType, login, logout,

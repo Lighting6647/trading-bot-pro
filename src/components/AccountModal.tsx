@@ -22,7 +22,8 @@ import {
   RotateCcw,
   Edit3,
   Zap,
-  ArrowLeft
+  ArrowLeft,
+  AlertCircle
 } from 'lucide-react';
 import { useTrading } from '@/context/TradingContext';
 
@@ -47,7 +48,10 @@ export default function AccountModal() {
     profit,
     syncBrokerBalance,
     resetSessionData,
-    addNotification
+    addNotification,
+    brokerLiveState,
+    setBrokerLiveState,
+    syncLiveBrokerAccount
   } = useTrading();
 
   const [activeTab, setActiveTab] = useState<'status' | 'login'>(user.isLoggedIn ? 'status' : 'login');
@@ -60,8 +64,11 @@ export default function AccountModal() {
   const [server, setServer] = useState(user.server || 'Exness-Real19');
   const [targetType, setTargetType] = useState<'DEMO' | 'REAL'>(user.accountType || 'REAL');
   const [customBalance, setCustomBalance] = useState<string>(capital ? capital.toString() : '10000');
-  const [apiKey, setApiKey] = useState('');
+  const [apiKey, setApiKey] = useState(brokerLiveState.apiKey || '');
+  const [apiSecret, setApiSecret] = useState(brokerLiveState.apiSecret || '');
+  const [webhookUrl, setWebhookUrl] = useState(brokerLiveState.webhookUrl || '');
   const [isConnecting, setIsConnecting] = useState(false);
+  const [apiTestResult, setApiTestResult] = useState<{ success: boolean; message: string; ping?: number } | null>(null);
 
   // Status Tab Balance Editor
   const [isEditingBalance, setIsEditingBalance] = useState(false);
@@ -106,6 +113,7 @@ export default function AccountModal() {
     setIsConnecting(true);
     setTimeout(() => {
       const parsedBal = parseFloat(customBalance.replace(/,/g, ''));
+      const env = targetType === 'REAL' ? 'LIVE' : 'PAPER';
       login({
         email: email.trim(),
         broker,
@@ -114,6 +122,14 @@ export default function AccountModal() {
         server: server.trim() || 'Real-Server',
         balance: !isNaN(parsedBal) && parsedBal > 0 ? parsedBal : (targetType === 'REAL' ? 10000 : 100000),
       });
+      setBrokerLiveState(prev => ({
+        ...prev,
+        apiKey,
+        apiSecret,
+        webhookUrl,
+        environment: env,
+        serverOrPassphrase: server.trim() || prev.serverOrPassphrase,
+      }));
       setIsConnecting(false);
       setActiveTab('status');
     }, 700);
@@ -612,19 +628,85 @@ export default function AccountModal() {
                 </div>
               </div>
 
-              {/* Optional API Key */}
-              <div className="space-y-1">
-                <label className="text-slate-400 flex items-center gap-1">
-                  <Key size={13} />
-                  <span>API Token / Secret Key (ตัวเลือกเพิ่มเติม)</span>
-                </label>
-                <input
-                  type="password"
-                  placeholder="สำหรับ Alpaca หรือ Binance API"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-300 outline-none font-mono text-[11px]"
-                />
+              {/* Optional API Key & Secret */}
+              <div className="space-y-2 p-3 bg-slate-900/80 rounded-xl border border-blue-900/30">
+                <div className="font-semibold text-blue-400 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Key size={13} />
+                    <span>การเชื่อมต่อ Broker Live API (อัตโนมัติ 100%)</span>
+                  </div>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 font-mono">
+                    {broker}
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] text-slate-400">API Key / Token:</label>
+                  <input
+                    type="password"
+                    placeholder={`ใส่ API Key ของ ${broker}`}
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 focus:border-blue-500 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none font-mono"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] text-slate-400">API Secret Key (ถ้ามี):</label>
+                  <input
+                    type="password"
+                    placeholder="Secret Key สำหรับลงนามออเดอร์"
+                    value={apiSecret}
+                    onChange={(e) => setApiSecret(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 focus:border-blue-500 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none font-mono"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] text-slate-400">Webhook / MetaApi Bridge URL (สำหรับ MT5/Exness):</label>
+                  <input
+                    type="text"
+                    placeholder="https://your-mt5-bridge.com/api/webhook"
+                    value={webhookUrl}
+                    onChange={(e) => setWebhookUrl(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 focus:border-blue-500 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none font-mono"
+                  />
+                </div>
+
+                {/* Test API Connection Button */}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setIsConnecting(true);
+                    setApiTestResult(null);
+                    const success = await syncLiveBrokerAccount({
+                      apiKey,
+                      apiSecret,
+                      webhookUrl,
+                      environment: targetType === 'REAL' ? 'LIVE' : 'PAPER',
+                    });
+                    setIsConnecting(false);
+                    setApiTestResult({
+                      success,
+                      message: success ? `เชื่อมต่อ ${broker} สำเร็จ!` : `เชื่อมต่อ ${broker} ไม่สำเร็จ ตรวจสอบ API Key`,
+                    });
+                  }}
+                  className="w-full py-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/40 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <RefreshCw size={13} className={isConnecting ? 'animate-spin' : ''} />
+                  <span>🔍 ทดสอบการเชื่อมต่อ Broker API จริง</span>
+                </button>
+
+                {apiTestResult && (
+                  <div className={`p-2 rounded-lg text-xs font-medium border flex items-center gap-1.5 ${
+                    apiTestResult.success 
+                      ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300' 
+                      : 'bg-rose-950/40 border-rose-500/40 text-rose-300'
+                  }`}>
+                    {apiTestResult.success ? <CheckCircle2 size={14} className="text-emerald-400" /> : <AlertCircle size={14} className="text-rose-400" />}
+                    <span>{apiTestResult.message}</span>
+                  </div>
+                )}
               </div>
 
               {/* Quick Fill Button */}
@@ -659,7 +741,7 @@ export default function AccountModal() {
                   ) : (
                     <>
                       <LogIn size={15} />
-                      <span>เข้าสู่ระบบ & เชื่อมต่อบอท</span>
+                      <span>บันทึก & เริ่มเชื่อมต่อบอท</span>
                     </>
                   )}
                 </button>

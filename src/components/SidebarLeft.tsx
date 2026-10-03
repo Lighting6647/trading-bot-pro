@@ -81,7 +81,7 @@ export default function SidebarLeft() {
           <div className="text-[11px] space-y-1 text-slate-300 mb-2">
             <div className="flex justify-between">
               <span className="text-slate-400">เซิร์ฟเวอร์:</span>
-              <span className="font-mono text-slate-200">Exness-MT5Real</span>
+              <span className="font-mono text-slate-200">Exness-MT5Real20</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-400">บัญชี:</span>

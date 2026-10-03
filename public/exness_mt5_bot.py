@@ -20,7 +20,7 @@ except ImportError:
 # ================= CONFIGURATION =================
 ACCOUNT_NUMBER = 160187619          # หมายเลขบัญชี Exness ของคุณ
 PASSWORD       = ""                 # ใส่รหัสผ่านบัญชี MT5 ของคุณที่นี่ (ถ้าปล่อยว่าง จะใช้รหัสที่บันทึกไว้ใน MT5)
-SERVER         = "Exness-MT5Real"   # เซิร์ฟเวอร์ Exness
+SERVER         = "Exness-MT5Real20" # เซิร์ฟเวอร์ Exness ที่ถูกต้องของคุณคือ Exness-MT5Real20
 SYMBOL         = "XAUUSDm"          # ทองคำ (หรือ EURUSDm, ETHUSD)
 BASE_LOT       = 0.01               # ขนาด Lot เริ่มต้นสำหรับบัญชี Cent
 MAGIC_NUMBER   = 888160

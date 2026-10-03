@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     const action = body.action || 'SYNC';
-    const server = body.server || 'Exness-MT5Real';
+    const server = body.server || 'Exness-MT5Real20';
     const login = body.login || '160187619';
     const isReal = body.environment !== 'TRIAL';
 

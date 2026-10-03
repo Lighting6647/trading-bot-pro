@@ -30,29 +30,43 @@ def initialize_mt5():
     print("=" * 50)
     print("🤖 TRADING BOT PRO - 100% FREE MT5 AUTO-TRADER")
     print("=" * 50)
+    print("⏳ กำลังเชื่อมต่อกับโปรแกรม MetaTrader 5...")
 
     if not mt5.initialize():
         print(f"❌ ไม่สามารถเปิด MT5 ได้: {mt5.last_error()}")
-        return False
-
-    # Login to Exness
-    if PASSWORD:
-        authorized = mt5.login(ACCOUNT_NUMBER, password=PASSWORD, server=SERVER)
-    else:
-        authorized = mt5.login(ACCOUNT_NUMBER, server=SERVER)
-
-    if not authorized:
-        print(f"⚠️ ล็อกอินบัญชี #{ACCOUNT_NUMBER} ไม่สำเร็จ: {mt5.last_error()}")
-        print("💡 โปรดตรวจสอบว่าโปรแกรม MetaTrader 5 เปิดอยู่และล็อกอินบัญชีเรียบร้อยแล้ว")
+        print("💡 โปรดตรวจสอบว่าโปรแกรม MetaTrader 5 ติดตั้งและเปิดอยู่ในเครื่องแล้ว")
         return False
 
     acc_info = mt5.account_info()
+    
+    # If MT5 is already logged in to our target account
+    if acc_info and acc_info.login == ACCOUNT_NUMBER:
+        print(f"✅ ตรวจพบพอร์ต Exness #{acc_info.login} ที่ล็อกอินอยู่ใน MT5 แล้ว!")
+    elif PASSWORD:
+        print(f"🔑 กำลังล็อกอินเข้าบัญชี #{ACCOUNT_NUMBER} ({SERVER})...")
+        authorized = mt5.login(ACCOUNT_NUMBER, password=PASSWORD, server=SERVER)
+        if not authorized:
+            print(f"⚠️ ล็อกอินไม่สำเร็จ: {mt5.last_error()}")
+            print("💡 กรุณาตรวจสอบรหัสผ่านในไฟล์ หรือล็อกอินในโปรแกรม MT5 ก่อนรันสคริปต์")
+            return False
+        acc_info = mt5.account_info()
+    else:
+        # Check whatever account is active in MT5
+        if acc_info:
+            print(f"ℹ️ พอร์ตที่เชื่อมต่อใน MT5: #{acc_info.login} ({acc_info.server})")
+        else:
+            print(f"⚠️ ยังไม่ได้ล็อกอินบัญชีใน MT5 โปรดล็อกอินพอร์ต #{ACCOUNT_NUMBER} ในโปรแกรม MT5")
+            return False
+
     if acc_info:
-        print(f"✅ เชื่อมต่อพอร์ต Exness #{acc_info.login} สำเร็จ!")
+        print("-" * 50)
+        print(f"🟢 สถานะการเชื่อมต่อ: ONLINE (เชื่อมต่อสมบูรณ์)")
+        print(f" • บัญชี: #{acc_info.login} ({acc_info.company})")
         print(f" • เซิร์ฟเวอร์: {acc_info.server}")
         print(f" • บาลานซ์: {acc_info.balance:,.2f} {acc_info.currency}")
         print(f" • อิควิตี้: {acc_info.equity:,.2f} {acc_info.currency}")
         print(f" • เลเวอเรจ: 1:{acc_info.leverage}")
+        print("-" * 50)
     return True
 
 # ================= SEND ORDER =================

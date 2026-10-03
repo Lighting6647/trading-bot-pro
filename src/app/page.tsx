@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 import { useTrading } from "@/context/TradingContext";
 import SidebarLeft from "@/components/SidebarLeft";
 import SidebarRight from "@/components/SidebarRight";
@@ -57,13 +59,45 @@ export default function Home() {
     notifications
   } = useTrading();
 
+  const containerRef = useRef<HTMLDivElement>(null);
   const [mobileView, setMobileView] = useState<MobileViewTab>('panel');
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const ActiveComponent = panelComponents[activePanel] || MainDashboard;
 
+  // GSAP Initial & Layout Animations
+  useGSAP(() => {
+    // Stagger in nav tab buttons
+    gsap.fromTo(
+      ".nav-tab-item",
+      { opacity: 0, y: -10 },
+      { opacity: 1, y: 0, duration: 0.4, stagger: 0.03, ease: "power2.out" }
+    );
+
+    // Sidebar entrances
+    gsap.fromTo(
+      ".gsap-sidebar-left",
+      { opacity: 0, x: -20 },
+      { opacity: 1, x: 0, duration: 0.5, ease: "power3.out" }
+    );
+    gsap.fromTo(
+      ".gsap-sidebar-right",
+      { opacity: 0, x: 20 },
+      { opacity: 1, x: 0, duration: 0.5, ease: "power3.out" }
+    );
+  }, { scope: containerRef });
+
+  // GSAP Animation when Active Panel changes
+  useGSAP(() => {
+    gsap.fromTo(
+      ".gsap-active-panel",
+      { opacity: 0, scale: 0.985, y: 8 },
+      { opacity: 1, scale: 1, y: 0, duration: 0.35, ease: "power2.out" }
+    );
+  }, { dependencies: [activePanel, mobileView], scope: containerRef });
+
   return (
-    <main className="flex flex-col h-screen bg-slate-950 text-slate-200 font-sans overflow-hidden select-none">
+    <main ref={containerRef} className="flex flex-col h-screen bg-slate-950 text-slate-200 font-sans overflow-hidden select-none">
       {/* Top Header: Navigation Tabs + Account Profile */}
       <header className="w-full bg-[#131b2f] border-b border-slate-800 px-2 sm:px-4 py-1.5 flex items-center justify-between gap-2 shrink-0 z-30 shadow-md">
         {/* Navigation Tabs (Smooth touch scrolling on all devices) */}
@@ -77,7 +111,7 @@ export default function Home() {
                   setActivePanel(key);
                   setMobileView('panel');
                 }}
-                className={`px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs rounded-md whitespace-nowrap transition-all cursor-pointer font-medium ${
+                className={`nav-tab-item px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs rounded-md whitespace-nowrap transition-all cursor-pointer font-medium ${
                   isActive
                     ? 'bg-blue-600/30 text-blue-400 border border-blue-500/60 shadow-xs'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 border border-transparent'
@@ -85,7 +119,7 @@ export default function Home() {
               >
                 {key}
                 {key === 'แจ้งเตือน' && unreadCount > 0 && (
-                  <span className="ml-1 px-1.5 py-0.2 text-[9px] bg-red-500 text-white rounded-full font-bold">
+                  <span className="ml-1 px-1.5 py-0.2 text-[9px] bg-red-500 text-white rounded-full font-bold animate-pulse">
                     {unreadCount}
                   </span>
                 )}
@@ -179,7 +213,7 @@ export default function Home() {
         {/* Left Sidebar (Desktop: always visible, Mobile: visible when 'portfolio' tab is active) */}
         <div className={`
           ${mobileView === 'portfolio' ? 'flex flex-1' : 'hidden'} 
-          md:flex w-full md:w-56 lg:w-64 shrink-0 h-full overflow-hidden
+          md:flex w-full md:w-56 lg:w-64 shrink-0 h-full overflow-hidden gsap-sidebar-left
         `}>
           <SidebarLeft />
         </div>
@@ -187,7 +221,7 @@ export default function Home() {
         {/* Center Main Panel (Desktop: always visible, Mobile: visible when 'panel' tab is active) */}
         <div className={`
           ${mobileView === 'panel' ? 'flex flex-1' : 'hidden'} 
-          md:flex flex-1 flex-col min-h-0 h-full overflow-hidden relative
+          md:flex flex-1 flex-col min-h-0 h-full overflow-hidden relative gsap-active-panel
         `}>
           <ActiveComponent />
           <SettingsModal />
@@ -197,14 +231,14 @@ export default function Home() {
         {/* Right Sidebar (Desktop: always visible, Mobile: visible when 'orders' tab is active) */}
         <div className={`
           ${mobileView === 'orders' ? 'flex flex-1' : 'hidden'} 
-          md:flex w-full md:w-64 xl:w-72 shrink-0 h-full overflow-hidden
+          md:flex w-full md:w-64 xl:w-72 shrink-0 h-full overflow-hidden gsap-sidebar-right
         `}>
           <SidebarRight />
         </div>
 
         {/* Mobile Dedicated Chart View */}
         {mobileView === 'chart' && (
-          <div className="md:hidden flex flex-1 flex-col min-h-0 h-full overflow-y-auto p-2 bg-[#0a0f1c]">
+          <div className="md:hidden flex flex-1 flex-col min-h-0 h-full overflow-y-auto p-2 bg-[#0a0f1c] gsap-active-panel">
             <div className="text-xs font-bold text-slate-300 mb-2 px-1">กราฟผลลัพธ์ประสิทธิภาพ (Performance Bar)</div>
             <BottomBar />
           </div>

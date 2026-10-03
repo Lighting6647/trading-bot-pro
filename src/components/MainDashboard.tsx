@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
 import { 
   LayoutDashboard, 
   Settings as SettingsIcon, 
@@ -56,6 +58,22 @@ export default function MainDashboard() {
   const [draftTp, setDraftTp] = useState(takeProfitTarget);
   const [draftSl, setDraftSl] = useState(stopLossTarget);
   const [draftAction, setDraftAction] = useState(targetAction);
+
+  const dashboardRef = useRef<HTMLDivElement>(null);
+
+  // GSAP Animation for Metric Cards and Charts
+  useGSAP(() => {
+    gsap.fromTo(
+      '.gsap-metric-card',
+      { opacity: 0, y: 14, scale: 0.96 },
+      { opacity: 1, y: 0, scale: 1, duration: 0.45, stagger: 0.04, ease: 'power2.out' }
+    );
+    gsap.fromTo(
+      '.gsap-chart-box',
+      { opacity: 0, y: 15 },
+      { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out', delay: 0.15 }
+    );
+  }, { scope: dashboardRef });
 
   useEffect(() => {
     setMounted(true);
@@ -133,7 +151,7 @@ export default function MainDashboard() {
   const slProgress = Math.min(100, Math.max(0, (profit < 0 ? (Math.abs(profit) / stopLossTarget) * 100 : 0)));
 
   return (
-    <div className="flex-1 flex flex-col bg-[#0a0f1c] min-h-0 overflow-hidden rounded-md border border-slate-800 m-2 relative">
+    <div ref={dashboardRef} className="flex-1 flex flex-col bg-[#0a0f1c] min-h-0 overflow-hidden rounded-md border border-slate-800 m-2 relative">
       {/* Header */}
       <div className="h-10 bg-[#131b2f] border-b border-slate-800 flex justify-between items-center px-4">
         <div className="flex items-center gap-2 text-blue-400 font-semibold text-sm">
@@ -373,43 +391,43 @@ export default function MainDashboard() {
 
              {/* Metric Cards */}
              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="bg-[#131b2f] border border-slate-800 rounded p-3">
+                <div className="gsap-metric-card bg-[#131b2f] border border-slate-800 rounded p-3 hover:border-slate-700 transition-colors">
                    <div className="text-slate-400 text-xs flex items-center gap-1 mb-1.5"><Target size={12}/> Win Rate</div>
                    <div className="text-xl font-bold text-slate-200">{winRate}%</div>
                    <div className="text-slate-500 text-[10px] mt-1">{wins} ชนะ / {total} ไม้</div>
                 </div>
-                <div className="bg-[#131b2f] border border-slate-800 rounded p-3">
+                <div className="gsap-metric-card bg-[#131b2f] border border-slate-800 rounded p-3 hover:border-slate-700 transition-colors">
                    <div className="text-slate-400 text-xs flex items-center gap-1 mb-1.5">ชนะ / แพ้ / เสมอ</div>
                    <div className="text-lg font-bold text-slate-200"><span className="text-green-500">{wins}</span> / <span className="text-red-500">{losses}</span> / 0</div>
                    <div className="text-slate-500 text-[10px] mt-1">ผลไม้ที่เทรด</div>
                 </div>
-                <div className="bg-[#131b2f] border border-slate-800 rounded p-3">
+                <div className="gsap-metric-card bg-[#131b2f] border border-slate-800 rounded p-3 hover:border-slate-700 transition-colors">
                    <div className="text-slate-400 text-xs flex items-center gap-1 mb-1.5">จำนวนไม้</div>
                    <div className="text-xl font-bold text-blue-400">{total}</div>
                    <div className="text-slate-500 text-[10px] mt-1">ออเดอร์ในรอบนี้</div>
                 </div>
-                <div className="bg-[#131b2f] border border-slate-800 rounded p-3">
+                <div className="gsap-metric-card bg-[#131b2f] border border-slate-800 rounded p-3 hover:border-slate-700 transition-colors">
                    <div className="text-slate-400 text-xs flex items-center gap-1 mb-1.5">Payout</div>
                    <div className="text-xl font-bold text-slate-200">85%</div>
                    <div className="text-slate-500 text-[10px] mt-1">SP500 / Gold</div>
                 </div>
                 
-                <div className="bg-[#131b2f] border border-slate-800 rounded p-3">
+                <div className="gsap-metric-card bg-[#131b2f] border border-slate-800 rounded p-3 hover:border-slate-700 transition-colors">
                    <div className="text-slate-400 text-xs flex items-center gap-1 mb-1.5"><TrendingUp size={12}/> กำไรรวม</div>
                    <div className="text-lg font-bold text-green-500 font-mono">+{grossProfit.toLocaleString()} ฿</div>
                    <div className="text-slate-500 text-[10px] mt-1">gross profit</div>
                 </div>
-                <div className="bg-[#131b2f] border border-slate-800 rounded p-3">
+                <div className="gsap-metric-card bg-[#131b2f] border border-slate-800 rounded p-3 hover:border-slate-700 transition-colors">
                    <div className="text-slate-400 text-xs flex items-center gap-1 mb-1.5"><TrendingDown size={12}/> ขาดทุนรวม</div>
                    <div className="text-lg font-bold text-red-500 font-mono">-{grossLoss.toLocaleString()} ฿</div>
                    <div className="text-slate-500 text-[10px] mt-1">gross loss</div>
                 </div>
-                <div className="bg-[#131b2f] border border-slate-800 rounded p-3">
+                <div className="gsap-metric-card bg-[#131b2f] border border-slate-800 rounded p-3 hover:border-slate-700 transition-colors">
                    <div className="text-slate-400 text-xs flex items-center gap-1 mb-1.5">Profit Factor</div>
                    <div className="text-lg font-bold text-amber-500 font-mono">{profitFactor}</div>
                    <div className="text-slate-500 text-[10px] mt-1">กำไร ÷ ขาดทุน</div>
                 </div>
-                <div className="bg-[#131b2f] border border-slate-800 rounded p-3">
+                <div className="gsap-metric-card bg-[#131b2f] border border-slate-800 rounded p-3 hover:border-slate-700 transition-colors">
                    <div className="text-slate-400 text-xs flex items-center gap-1 mb-1.5">กำไรเฉลี่ยต่อไม้</div>
                    <div className={`text-lg font-bold font-mono ${parseInt(expectancy) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                      {parseInt(expectancy) > 0 ? '+' : ''}{expectancy} ฿
@@ -419,7 +437,7 @@ export default function MainDashboard() {
              </div>
 
              {/* Chart */}
-             <div className="flex-1 bg-[#131b2f] border border-slate-800 rounded p-4 flex flex-col min-h-[160px]">
+             <div className="gsap-chart-box flex-1 bg-[#131b2f] border border-slate-800 rounded p-4 flex flex-col min-h-[160px]">
                 <div className="flex justify-between items-center text-xs text-slate-300 mb-2">
                    <div className="flex items-center gap-2">
                      <input type="checkbox" defaultChecked className="accent-blue-500" />

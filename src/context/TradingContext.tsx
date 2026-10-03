@@ -352,7 +352,7 @@ const defaultUser: UserAccount = {
   accountType: 'REAL',
   accountNumber: '160187619',
   server: 'Exness-MT5Real',
-  realBalance: 1017.00,
+  realBalance: 1030.52,
   demoBalance: 100000,
   currency: 'USC',
   isLoggedIn: true,
@@ -381,7 +381,7 @@ export function TradingProvider({ children }: { children: ReactNode }) {
   const [targetAction, setTargetAction] = useState<'stop' | 'alert' | 'reset'>('stop');
 
   // Separate states for Real and Demo accounts
-  const [realCapital, setRealCapital] = useState<number>(1017.00);
+  const [realCapital, setRealCapital] = useState<number>(1030.52);
   const [demoCapital, setDemoCapital] = useState<number>(100000);
   const [realProfit, setRealProfit] = useState<number>(0);
   const [demoProfit, setDemoProfit] = useState<number>(0);
@@ -413,13 +413,12 @@ export function TradingProvider({ children }: { children: ReactNode }) {
       const savedUser = localStorage.getItem('trading_user_account');
       if (savedUser) {
         const u = JSON.parse(savedUser);
-        // If placeholder account was saved earlier, upgrade to real user's Exness account
-        if (!u.accountNumber || u.accountNumber.includes('7739210') || u.realBalance === 10000 || u.realBalance === 9995) {
+        if (!u.accountNumber || u.accountNumber.includes('7739210') || u.realBalance === 10000 || u.realBalance === 9995 || u.realBalance === 1017) {
           u.accountNumber = '160187619';
           u.name = 'Light Cent';
           u.broker = 'Exness';
           u.server = 'Exness-MT5Real';
-          u.realBalance = 1017.00;
+          u.realBalance = 1030.52;
           u.currency = 'USC';
         }
         setUser(u);
@@ -429,8 +428,8 @@ export function TradingProvider({ children }: { children: ReactNode }) {
       const savedRealCap = localStorage.getItem('trading_real_capital');
       if (savedRealCap) {
         const num = Number(savedRealCap);
-        if (num === 10000 || num === 9995) {
-          setRealCapital(1017.00);
+        if (num === 10000 || num === 9995 || num === 1017) {
+          setRealCapital(1030.52);
         } else {
           setRealCapital(num);
         }

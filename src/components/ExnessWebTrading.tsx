@@ -113,22 +113,52 @@ export default function ExnessWebTrading() {
   };
 
   const userscriptCode = `// ==UserScript==
-// @name         Trading Bot Pro - Exness WebTrading Bridge
+// @name         Trading Bot Pro - Exness Live Bridge Auto-Trader
 // @namespace    http://localhost:3000/
-// @version      1.0
-// @description  Auto-bridge Trading Bot Pro AI Signals with Exness WebTrading
-// @match        https://my.exness.com/webtrading/*
+// @version      2.0
+// @description  Connects Trading Bot Pro AI signals directly to Exness WebTrading to execute real orders
+// @match        https://my.exness.com/*
+// @match        https://webterminal.exness.com/*
 // @grant        none
 // ==/UserScript==
 
 (function() {
     'use strict';
-    console.log("⚡ Trading Bot Pro Bridge Attached to Exness WebTrading (#160187619)!");
+    console.log("⚡ [Trading Bot Pro] Bridge Initialized on Exness (#160187619)!");
+
+    // Create On-Screen HUD Status Badge on Exness
+    const hud = document.createElement("div");
+    hud.style.cssText = "position:fixed;bottom:20px;right:20px;z-index:999999;background:#0f172a;color:#10b981;padding:10px 16px;border-radius:8px;border:1px solid #10b981;font-family:sans-serif;font-size:12px;font-weight:bold;box-shadow:0 4px 20px rgba(0,0,0,0.5);display:flex;align-items:center;gap:8px;";
+    hud.innerHTML = "<span style='width:8px;height:8px;background:#10b981;border-radius:50%;display:inline-block;animation:pulse 1s infinite;'></span> Trading Bot Pro: Bridge LIVE (#160187619)";
+    document.body.appendChild(hud);
+
     const bc = new BroadcastChannel("exness_trading_bot_pro");
     bc.onmessage = (event) => {
-        if (event.data?.action === 'EXECUTE_ORDER') {
-            console.log("🚀 Executing Order on Exness:", event.data);
-            // Click Buy/Sell button on Exness Web terminal DOM
+        const data = event.data;
+        if (data?.action === 'EXECUTE_ORDER') {
+            console.log("🚀 [Trading Bot Pro] Incoming Order:", data);
+            hud.style.borderColor = "#f59e0b";
+            hud.innerText = "⚡ Executing " + data.side + " " + data.symbol + " (Lot: " + data.lots + ")...";
+
+            // Click matching Buy/Sell button on Exness Web terminal DOM
+            const isBuy = data.side === 'BUY';
+            const buttons = Array.from(document.querySelectorAll('button'));
+            const targetBtn = buttons.find(b => {
+                const text = b.innerText.trim().toUpperCase();
+                return isBuy ? (text.includes('BUY') || text.includes('ซื้อ')) : (text.includes('SELL') || text.includes('ขาย'));
+            });
+
+            if (targetBtn) {
+                targetBtn.click();
+                hud.style.borderColor = "#10b981";
+                hud.innerText = "✅ Order Placed: " + data.side + " " + data.symbol + "!";
+                setTimeout(() => {
+                    hud.innerHTML = "<span style='width:8px;height:8px;background:#10b981;border-radius:50%;display:inline-block;'></span> Trading Bot Pro: Bridge LIVE (#160187619)";
+                }, 3000);
+            } else {
+                hud.style.borderColor = "#ef4444";
+                hud.innerText = "⚠️ Please open trade panel for " + data.symbol;
+            }
         }
     };
 })();`;

@@ -686,7 +686,7 @@ export function TradingProvider({ children }: { children: ReactNode }) {
   }) => {
     const assignedBalance = data.balance !== undefined && !isNaN(data.balance)
       ? data.balance
-      : (data.accountType === 'REAL' ? 10000 : 100000);
+      : (data.accountType === 'REAL' ? 1017.00 : 100000);
 
     if (data.accountType === 'REAL') {
       setRealCapital(assignedBalance);
@@ -696,20 +696,24 @@ export function TradingProvider({ children }: { children: ReactNode }) {
       setDemoCapital(assignedBalance);
     }
 
+    const accNum = data.accountNumber && !data.accountNumber.startsWith('ACC-')
+      ? data.accountNumber
+      : '160187619';
+
     setUser({
       email: data.email,
       name: data.email.split('@')[0],
       broker: data.broker,
       accountType: data.accountType,
-      accountNumber: data.accountNumber || `ACC-${Math.floor(1000000 + Math.random() * 9000000)}`,
-      server: data.server || (data.broker === 'Exness' ? 'Exness-Real19' : 'Live-Server'),
-      realBalance: data.accountType === 'REAL' ? assignedBalance : 10000,
+      accountNumber: accNum,
+      server: data.server || (data.broker === 'Exness' ? 'Exness-MT5Real' : 'Exness-MT5Real'),
+      realBalance: data.accountType === 'REAL' ? assignedBalance : 1017.00,
       demoBalance: data.accountType === 'DEMO' ? assignedBalance : 100000,
-      currency: 'THB',
+      currency: data.broker === 'Exness' ? 'USC' : 'USC',
       isLoggedIn: true,
     });
     setIsLoginModalOpen(false);
-    addNotification('signal', `🔐 เชื่อมต่อบัญชีสำเร็จ: ${data.email} (${data.broker}) ทุน: ฿${assignedBalance.toLocaleString()}`);
+    addNotification('signal', `🔐 เชื่อมต่อบัญชีสำเร็จ: ${data.email} (#${accNum}) ทุน: ${assignedBalance.toLocaleString()} USC`);
   }, [addNotification]);
 
   const logout = useCallback(() => {

@@ -368,7 +368,7 @@ export function TradingProvider({ children }: { children: ReactNode }) {
   const [isAutoTrade, setIsAutoTrade] = useState(true);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [settings, setSettings] = useState<Settings>(defaultSettings);
-  const [activePanel, setActivePanel] = useState('แดชบอร์ด');
+  const [activePanel, setActivePanel] = useState('เทรดตรง AI');
   const [language, setLanguage] = useState<'TH' | 'EN'>('TH');
 
   // User Account & Login

@@ -15,6 +15,7 @@ import AISignalDashboard from "@/components/AISignalDashboard";
 import SmartRiskManager from "@/components/SmartRiskManager";
 import NotificationsPanel from "@/components/NotificationsPanel";
 import ExnessWebTrading from "@/components/ExnessWebTrading";
+import DirectTradingTerminal from "@/components/DirectTradingTerminal";
 import { 
   User, 
   LogIn, 
@@ -25,13 +26,14 @@ import {
   BarChart2, 
   Play, 
   Square,
-  ArrowLeft 
+  ArrowLeft,
+  Zap
 } from "lucide-react";
 
 const panelComponents: Record<string, React.ComponentType> = {
-  'แดชบอร์ด': MainDashboard,
-  'Exness เทรด': ExnessWebTrading,
-  'AI สัญญาณ': AISignalDashboard,
+  'เทรดตรง AI': DirectTradingTerminal,
+  'Exness MT5': ExnessWebTrading,
+  'แดชบอร์ดสถิติ': MainDashboard,
   'ความเสี่ยง': SmartRiskManager,
   'แจ้งเตือน': NotificationsPanel,
 };
@@ -211,35 +213,37 @@ export default function Home() {
 
       {/* Main Workspace Layout */}
       <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden relative">
-        {/* Left Sidebar (Desktop: always visible, Mobile: visible when 'portfolio' tab is active) */}
-        <div className={`
-          ${mobileView === 'portfolio' ? 'flex flex-1' : 'hidden'} 
-          md:flex w-full md:w-56 lg:w-64 shrink-0 h-full overflow-hidden gsap-sidebar-left
-        `}>
-          <SidebarLeft />
-        </div>
+        {/* Left Sidebar (Desktop: visible on stats dashboard, Mobile: visible when 'portfolio' tab is active) */}
+        {activePanel !== 'เทรดตรง AI' && (
+          <div className={`
+            ${mobileView === 'portfolio' ? 'flex flex-1' : 'hidden'} 
+            md:flex w-full md:w-56 lg:w-64 shrink-0 h-full overflow-hidden gsap-sidebar-left
+          `}>
+            <SidebarLeft />
+          </div>
+        )}
         
-        {/* Center Main Panel (Desktop: always visible, Mobile: visible when 'panel' tab is active) */}
+        {/* Center Main Panel */}
         <div className={`
           ${mobileView === 'panel' ? 'flex flex-1' : 'hidden'} 
           md:flex flex-1 flex-col min-h-0 h-full overflow-hidden relative gsap-active-panel
         `}>
-          {/* Back to Main Dashboard button banner when inside any sub-menu */}
-          {activePanel !== 'แดชบอร์ด' && (
-            <div className="bg-[#111827] border-b border-blue-500/30 px-3 py-1.5 flex items-center justify-between shrink-0 z-20 shadow-xs">
+          {/* Back to Direct Trader button banner when inside any sub-menu */}
+          {activePanel !== 'เทรดตรง AI' && (
+            <div className="bg-[#111827] border-b border-amber-500/30 px-3 py-1.5 flex items-center justify-between shrink-0 z-20 shadow-xs">
               <button
                 onClick={() => {
-                  setActivePanel('แดชบอร์ด');
+                  setActivePanel('เทรดตรง AI');
                   setMobileView('panel');
                 }}
-                className="flex items-center gap-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 px-3 py-1 rounded-lg transition-all cursor-pointer shadow-sm shadow-blue-600/30 active:scale-95 border border-blue-400/40"
+                className="flex items-center gap-1.5 text-xs font-bold text-slate-950 bg-amber-400 hover:bg-amber-300 px-3 py-1 rounded-lg transition-all cursor-pointer shadow-sm shadow-amber-500/30 active:scale-95 border border-yellow-300"
               >
                 <ArrowLeft size={14} />
-                <span>← กลับหน้าหลัก (แดชบอร์ด)</span>
+                <span>← กลับหน้าเทรดตรง (Direct Trader)</span>
               </button>
               <div className="flex items-center gap-2 text-xs text-slate-300">
                 <span className="text-slate-400">เมนูปัจจุบัน:</span>
-                <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 font-medium">
+                <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-medium">
                   {activePanel}
                 </span>
               </div>
@@ -249,13 +253,15 @@ export default function Home() {
           <ActiveComponent />
         </div>
 
-        {/* Right Sidebar (Desktop: always visible, Mobile: visible when 'orders' tab is active) */}
-        <div className={`
-          ${mobileView === 'orders' ? 'flex flex-1' : 'hidden'} 
-          md:flex w-full md:w-64 xl:w-72 shrink-0 h-full overflow-hidden gsap-sidebar-right
-        `}>
-          <SidebarRight />
-        </div>
+        {/* Right Sidebar (Desktop: visible on stats dashboard, Mobile: visible when 'orders' tab is active) */}
+        {activePanel !== 'เทรดตรง AI' && (
+          <div className={`
+            ${mobileView === 'orders' ? 'flex flex-1' : 'hidden'} 
+            md:flex w-full md:w-64 xl:w-72 shrink-0 h-full overflow-hidden gsap-sidebar-right
+          `}>
+            <SidebarRight />
+          </div>
+        )}
 
         {/* Mobile Dedicated Chart View */}
         {mobileView === 'chart' && (

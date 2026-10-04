@@ -97,7 +97,10 @@ export default function DirectTradingTerminal() {
     addNotification,
     setIsSettingsOpen,
     setIsAiConfigModalOpen,
-    aiConfig
+    aiConfig,
+    isExnessWebTradingLive,
+    exnessLiveSyncTime,
+    requestExnessWebSync
   } = useTrading();
 
   // Local state
@@ -339,9 +342,26 @@ export default function DirectTradingTerminal() {
             </span>
           </div>
 
-          <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 bg-slate-900/80 rounded-lg border border-emerald-500/30 text-[11px] text-emerald-400 font-mono">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-            <span>MT5 Exness: ONLINE ({brokerLiveState.pingMs}ms)</span>
+          {/* Exness WebTrading (my.exness.com) Live Sync Indicator */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-900/90 rounded-lg border border-slate-800 text-xs font-mono">
+            {isExnessWebTradingLive ? (
+              <span className="flex items-center gap-1.5 text-emerald-400 font-bold" title="เชื่อมต่อสดกับ my.exness.com/webtrading เรียลไทม์">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                <span>my.exness.com: LIVE ({exnessLiveSyncTime || 'ซิงค์สด'})</span>
+              </span>
+            ) : (
+              <button
+                onClick={() => {
+                  window.open("https://my.exness.com/webtrading/", "_blank");
+                  requestExnessWebSync();
+                }}
+                className="flex items-center gap-1.5 text-amber-400 hover:text-amber-300 font-bold cursor-pointer transition-colors"
+                title="คลิกเพื่อเปิดหน้าเว็บ Exness WebTrading และเริ่มซิงค์อัตโนมัติ"
+              >
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                <span>my.exness.com: ซิงค์สด ↗</span>
+              </button>
+            )}
           </div>
         </div>
 

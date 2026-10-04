@@ -272,10 +272,12 @@ export default function Home() {
         )}
       </div>
       
-      {/* Bottom Bar (Desktop: docked at bottom, Mobile: hidden by default or shown in tab) */}
-      <div className="hidden md:block w-full shrink-0">
-        <BottomBar />
-      </div>
+      {/* Bottom Bar (Desktop: docked at bottom, only when not on Direct Trading Terminal) */}
+      {activePanel !== 'เทรดตรง AI' && (
+        <div className="hidden md:block w-full shrink-0">
+          <BottomBar />
+        </div>
+      )}
 
       {/* Global Modals (Rendered at root to prevent GSAP transform clipping) */}
       <SettingsModal />

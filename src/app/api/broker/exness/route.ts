@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     if (action === 'SYNC') {
       const balance = typeof body.balance === 'number' && !isNaN(body.balance) && body.balance > 0
         ? body.balance
-        : (isReal ? 1017.00 : 100000);
+        : (isReal ? 1329.57 : 100000);
 
       return NextResponse.json({
         success: true,

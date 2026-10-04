@@ -1,7 +1,7 @@
-// Trading Bot Pro - Exness Live Bridge Injector v4.0
+// Trading Bot Pro - Exness Live Bridge Injector v5.0 (my.exness.com/webtrading)
 (function() {
     'use strict';
-    console.log("⚡ [Trading Bot Pro] Live Bridge Attached to Exness WebTrading!");
+    console.log("⚡ [Trading Bot Pro] Live Bridge Attached to Exness WebTrading (https://my.exness.com/webtrading/)!");
 
     // Create On-Screen HUD Badge
     const existingHud = document.getElementById("tbp-bridge-hud");
@@ -9,7 +9,7 @@
 
     const hud = document.createElement("div");
     hud.id = "tbp-bridge-hud";
-    hud.style.cssText = "position:fixed;bottom:25px;right:25px;z-index:999999;background:#090d16;color:#10b981;padding:12px 18px;border-radius:12px;border:2px solid #10b981;font-family:system-ui,sans-serif;font-size:12px;font-weight:bold;box-shadow:0 8px 30px rgba(0,0,0,0.8);display:flex;align-items:center;gap:10px;";
+    hud.style.cssText = "position:fixed;bottom:25px;right:25px;z-index:999999;background:#090d16;color:#10b981;padding:12px 18px;border-radius:12px;border:2px solid #10b981;font-family:system-ui,sans-serif;font-size:12px;font-weight:bold;box-shadow:0 8px 30px rgba(0,0,0,0.8);display:flex;align-items:center;gap:10px;cursor:pointer;";
     hud.innerHTML = "<span style='width:10px;height:10px;background:#10b981;border-radius:50%;display:inline-block;box-shadow:0 0 8px #10b981;'></span> <span>Trading Bot Pro: <strong style='color:#fff;'>Bridge LIVE</strong> (#160187619)</span>";
     document.body.appendChild(hud);
 
@@ -21,7 +21,11 @@
 
     function scrapeAndSend() {
         let balance = null;
-        const balElements = document.querySelectorAll('[data-qa*="balance"], [data-testid*="balance"], .account-info__value, .balance-value, .value');
+        let equity = null;
+        let accountNumber = '160187619';
+
+        // Strategy A: Look for balance elements in Exness DOM
+        const balElements = document.querySelectorAll('[data-qa*="balance"], [data-testid*="balance"], .account-info__value, .balance-value, .value, [class*="balance"], [class*="equity"]');
         balElements.forEach(el => {
             const text = el.innerText || '';
             const clean = parseFloat(text.replace(/[^0-9.]/g, ''));
@@ -30,6 +34,7 @@
             }
         });
 
+        // Strategy B: Full text scan for Balance / USC / USD numbers
         if (!balance) {
             const bodyText = document.body.innerText;
             const match = bodyText.match(/(?:Balance|ยอดเงินคงเหลือ|Equity|อิควิตี้)[:\s]*([0-9,]+(?:\.[0-9]+)?)/i);
@@ -39,27 +44,56 @@
             }
         }
 
+        // Account number scan
+        const accMatch = document.body.innerText.match(/#?([0-9]{7,10})/);
+        if (accMatch && accMatch[1]) {
+            accountNumber = accMatch[1];
+        }
+
         if (balance) {
             hud.innerHTML = "<span style='width:10px;height:10px;background:#10b981;border-radius:50%;display:inline-block;box-shadow:0 0 8px #10b981;'></span> <span>Bot Sync: <strong style='color:#fbbf24;'>" + balance.toLocaleString() + " USC</strong></span>";
+            
+            const payload = {
+                action: 'ACCOUNT_SYNC_FROM_EXNESS',
+                balance: balance,
+                equity: equity || balance,
+                accountNumber: accountNumber,
+                source: 'my.exness.com/webtrading',
+                timestamp: Date.now()
+            };
+
+            // 1. BroadcastChannel across tabs
             if (bc) {
-                bc.postMessage({
-                    action: 'ACCOUNT_SYNC_FROM_EXNESS',
-                    balance: balance,
-                    equity: balance,
-                    accountNumber: '160187619',
-                    timestamp: Date.now()
-                });
+                bc.postMessage(payload);
+            }
+
+            // 2. Window Opener postMessage (if opened via bot)
+            if (window.opener && !window.opener.closed) {
+                try {
+                    window.opener.postMessage(payload, '*');
+                } catch(e) {}
+            }
+
+            // 3. GM_setValue if Tampermonkey
+            if (typeof GM_setValue !== 'undefined') {
+                GM_setValue('exness_live_account_data', { ...payload, _t: Date.now() });
             }
         }
     }
 
+    // Scrape periodically
     setInterval(scrapeAndSend, 2000);
     scrapeAndSend();
 
-    // Listen for orders from Bot
+    // Listen for events from Bot
     if (bc) {
         bc.onmessage = function(event) {
             const data = event.data;
+            if (data?.action === 'REQUEST_ACCOUNT_SYNC') {
+                console.log("🔄 [Exness Bridge Engine] Sync Requested from Bot! Scraping now...");
+                scrapeAndSend();
+            }
+
             if (data?.action === 'EXECUTE_ORDER') {
                 console.log("🎯 [Exness Bridge Engine] Executing Live Order:", data);
                 hud.style.borderColor = "#f59e0b";

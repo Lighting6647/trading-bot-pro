@@ -1,24 +1,34 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Maximize2, Minimize2, RefreshCw, BarChart2, TrendingUp, Zap } from 'lucide-react';
+import { Maximize2, Minimize2, BarChart2 } from 'lucide-react';
 
 type Props = {
   symbol?: string;
   theme?: 'dark' | 'light';
   height?: number | string;
   allowFullscreen?: boolean;
+  hideHeader?: boolean;
 };
 
 export default function TradingViewChart({
   symbol = 'OANDA:XAUUSD',
   theme = 'dark',
-  height = 380,
+  height = '100%',
   allowFullscreen = true,
+  hideHeader = false,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const chartContainerId = useRef(`tv_chart_${Math.random().toString(36).substring(2, 9)}`).current;
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentSymbol, setCurrentSymbol] = useState(symbol);
+
+  // Sync symbol changes from parent
+  useEffect(() => {
+    if (symbol) {
+      setCurrentSymbol(symbol);
+    }
+  }, [symbol]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -33,7 +43,7 @@ export default function TradingViewChart({
     script.onload = () => {
       if (typeof (window as any).TradingView !== 'undefined' && containerRef.current) {
         new (window as any).TradingView.widget({
-          container_id: containerRef.current.id,
+          container_id: chartContainerId,
           autosize: true,
           symbol: currentSymbol,
           interval: '5',
@@ -73,7 +83,7 @@ export default function TradingViewChart({
         containerRef.current.innerHTML = '';
       }
     };
-  }, [currentSymbol, theme]);
+  }, [currentSymbol, theme, chartContainerId]);
 
   const quickSymbols = [
     { label: 'GOLD (XAU/USD)', value: 'OANDA:XAUUSD' },
@@ -83,47 +93,53 @@ export default function TradingViewChart({
   ];
 
   return (
-    <div className={`flex flex-col bg-[#0b1120] border border-slate-800 rounded-xl overflow-hidden shadow-xl transition-all ${isFullscreen ? 'fixed inset-3 z-50 h-[calc(100vh-24px)]' : ''}`}>
-      {/* Chart Top Navigation Bar */}
-      <div className="bg-[#111827] px-3 py-2 border-b border-slate-800 flex items-center justify-between gap-2 shrink-0">
-        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
-          <div className="flex items-center gap-1 text-xs font-bold text-amber-400 mr-2 shrink-0">
-            <BarChart2 size={15} />
-            <span>TradingView Live</span>
+    <div className={`flex flex-col w-full h-full flex-1 min-h-0 bg-[#0b1120] border border-slate-800 rounded-xl overflow-hidden shadow-xl transition-all ${isFullscreen ? 'fixed inset-2 z-50 h-[calc(100vh-16px)]' : ''}`}>
+      {/* Chart Top Navigation Bar (Hidden if hideHeader is true) */}
+      {!hideHeader && (
+        <div className="bg-[#111827] px-3 py-1.5 border-b border-slate-800 flex items-center justify-between gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+            <div className="flex items-center gap-1 text-xs font-bold text-amber-400 mr-2 shrink-0">
+              <BarChart2 size={15} />
+              <span>TradingView Live</span>
+            </div>
+
+            {quickSymbols.map((item) => (
+              <button
+                key={item.value}
+                onClick={() => setCurrentSymbol(item.value)}
+                className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all shrink-0 cursor-pointer ${
+                  currentSymbol === item.value
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-xs'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
           </div>
 
-          {quickSymbols.map((item) => (
+          {allowFullscreen && (
             <button
-              key={item.value}
-              onClick={() => setCurrentSymbol(item.value)}
-              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all shrink-0 cursor-pointer ${
-                currentSymbol === item.value
-                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-xs'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-              }`}
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer shrink-0"
+              title={isFullscreen ? 'ย่อหน้าต่าง' : 'ขยายเต็มจอ'}
             >
-              {item.label}
+              {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
             </button>
-          ))}
+          )}
         </div>
+      )}
 
-        {allowFullscreen && (
-          <button
-            onClick={() => setIsFullscreen(!isFullscreen)}
-            className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer shrink-0"
-            title={isFullscreen ? 'ย่อหน้าต่าง' : 'ขยายเต็มจอ'}
-          >
-            {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-          </button>
-        )}
-      </div>
-
-      {/* Chart Container */}
+      {/* Chart Container - Guaranteed 100% Height & Width */}
       <div
-        id={`tv-widget-${Math.random().toString(36).substring(2, 9)}`}
+        id={chartContainerId}
         ref={containerRef}
-        style={{ height: isFullscreen ? '100%' : typeof height === 'number' ? `${height}px` : height }}
-        className="w-full relative"
+        style={{ 
+          width: '100%', 
+          height: '100%',
+          minHeight: isFullscreen ? '100%' : '300px'
+        }}
+        className="w-full h-full flex-1 min-h-0 relative"
       />
     </div>
   );

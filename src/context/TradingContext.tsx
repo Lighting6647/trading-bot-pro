@@ -276,6 +276,11 @@ type TradingContextType = {
   // Market Hours & Auto-Pause on Closed Market
   autoStopOnMarketClose: boolean;
   setAutoStopOnMarketClose: (v: boolean) => void;
+
+  // Real-time Exness WebTrading (my.exness.com) Live Sync
+  isExnessWebTradingLive: boolean;
+  exnessLiveSyncTime: string;
+  requestExnessWebSync: () => void;
 };
 
 // ============ DEFAULTS & MOCK DATA ============
@@ -402,6 +407,20 @@ export function TradingProvider({ children }: { children: ReactNode }) {
 
   // Real Broker Live API
   const [brokerLiveState, setBrokerLiveState] = useState<LiveBrokerState>(defaultBrokerLiveState);
+
+  // Real-time Exness WebTrading (my.exness.com) Live Sync States
+  const [isExnessWebTradingLive, setIsExnessWebTradingLive] = useState(false);
+  const [exnessLiveSyncTime, setExnessLiveSyncTime] = useState<string>('');
+
+  const requestExnessWebSync = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const bc = new BroadcastChannel("exness_trading_bot_pro");
+        bc.postMessage({ action: 'REQUEST_ACCOUNT_SYNC', timestamp: Date.now() });
+        setTimeout(() => bc.close(), 1200);
+      } catch {}
+    }
+  }, []);
 
   // LocalStorage Persistence
   useEffect(() => {
@@ -565,6 +584,57 @@ export function TradingProvider({ children }: { children: ReactNode }) {
       read: false,
     }, ...prev].slice(0, 50));
   }, []);
+
+  // Global Listener for Exness WebTrading (my.exness.com) Broadcast & Messages
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel("exness_trading_bot_pro");
+      bc.onmessage = (event) => {
+        const data = event.data;
+        if (data?.action === 'ACCOUNT_SYNC_FROM_EXNESS' && typeof data.balance === 'number' && !isNaN(data.balance) && data.balance > 0) {
+          setIsExnessWebTradingLive(true);
+          const timeStr = new Date().toLocaleTimeString('th-TH');
+          setExnessLiveSyncTime(timeStr);
+          setRealCapital(data.balance);
+          setUser(prev => ({
+            ...prev,
+            realBalance: data.balance,
+            accountNumber: data.accountNumber ? data.accountNumber.replace('#', '') : prev.accountNumber,
+          }));
+          addNotification('signal', `⚡ [Live Exness Sync] ดึงยอดเงินสดจาก my.exness.com สำเร็จ: ${data.balance.toLocaleString()} USC (Equity: ${data.equity || data.balance})`);
+        }
+      };
+    } catch {}
+
+    const handleWindowMessage = (event: MessageEvent) => {
+      const data = event.data;
+      if (data?.action === 'ACCOUNT_SYNC_FROM_EXNESS' && typeof data.balance === 'number' && !isNaN(data.balance) && data.balance > 0) {
+        setIsExnessWebTradingLive(true);
+        const timeStr = new Date().toLocaleTimeString('th-TH');
+        setExnessLiveSyncTime(timeStr);
+        setRealCapital(data.balance);
+        setUser(prev => ({
+          ...prev,
+          realBalance: data.balance,
+          accountNumber: data.accountNumber ? data.accountNumber.replace('#', '') : prev.accountNumber,
+        }));
+        addNotification('signal', `⚡ [Live Exness Sync] ดึงยอดเงินสดจาก my.exness.com สำเร็จ: ${data.balance.toLocaleString()} USC`);
+      }
+    };
+
+    window.addEventListener('message', handleWindowMessage);
+
+    // Initial ping to see if Exness tab is already open
+    requestExnessWebSync();
+
+    return () => {
+      if (bc) bc.close();
+      window.removeEventListener('message', handleWindowMessage);
+    };
+  }, [addNotification, requestExnessWebSync]);
 
   const switchAccountType = useCallback((type: 'DEMO' | 'REAL') => {
     setUser(prev => ({ ...prev, accountType: type }));
@@ -1106,6 +1176,7 @@ export function TradingProvider({ children }: { children: ReactNode }) {
       chatMessages, sendChatMessage,
       backtestResult, runBacktest, isBacktesting,
       autoStopOnMarketClose, setAutoStopOnMarketClose,
+      isExnessWebTradingLive, exnessLiveSyncTime, requestExnessWebSync,
     }}>
       {children}
     </TradingContext.Provider>

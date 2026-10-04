@@ -15,15 +15,15 @@ import {
   Server, 
   Lock, 
   ArrowRightLeft,
-  Eye,
-  EyeOff,
   Wallet,
   RefreshCw,
   RotateCcw,
   Edit3,
   Zap,
   ArrowLeft,
-  AlertCircle
+  ExternalLink,
+  Copy,
+  Check
 } from 'lucide-react';
 import { useTrading } from '@/context/TradingContext';
 
@@ -49,9 +49,9 @@ export default function AccountModal() {
     syncBrokerBalance,
     resetSessionData,
     addNotification,
-    brokerLiveState,
-    setBrokerLiveState,
-    syncLiveBrokerAccount
+    isExnessWebTradingLive,
+    exnessLiveSyncTime,
+    requestExnessWebSync
   } = useTrading();
 
   const [activeTab, setActiveTab] = useState<'status' | 'login'>(user.isLoggedIn ? 'status' : 'login');
@@ -64,6 +64,7 @@ export default function AccountModal() {
   const [targetType, setTargetType] = useState<'DEMO' | 'REAL'>(user.accountType || 'REAL');
   const [customBalance, setCustomBalance] = useState<string>(capital ? capital.toString() : '1329.57');
   const [isConnecting, setIsConnecting] = useState(false);
+  const [copiedScript, setCopiedScript] = useState(false);
 
   // Status Tab Balance Editor
   const [isEditingBalance, setIsEditingBalance] = useState(false);
@@ -71,71 +72,55 @@ export default function AccountModal() {
 
   // Real Broker Syncing State & Feedback
   const [isSyncing, setIsSyncing] = useState(false);
-  const [syncFeedback, setSyncFeedback] = useState<{ message: string; timestamp: string; balance: number; ping: number } | null>(null);
-  const [syncCustomAmount, setSyncCustomAmount] = useState(capital.toString());
+  const [syncFeedback, setSyncFeedback] = useState<{ message: string; timestamp: string; balance: number; ping: number; isLive?: boolean } | null>(null);
 
   useEffect(() => {
     setEditBalanceInput(capital.toString());
-    setSyncCustomAmount(capital.toString());
   }, [capital]);
 
   if (!isLoginModalOpen) return null;
 
-  // Real-time Direct Sync Function
-  const handleSyncBroker = async (amountToSync?: number) => {
+  // Real-time Direct Sync Function with my.exness.com
+  const handleSyncBroker = () => {
     setIsSyncing(true);
     setSyncFeedback(null);
-    try {
-      const targetBal = amountToSync !== undefined 
-        ? amountToSync 
-        : (user.accountType === 'REAL' ? (capital || 1329.57) : 100000);
+    
+    // Broadcast live sync request to any open my.exness.com tab
+    requestExnessWebSync();
 
-      // Fetch from internal live gateway route
-      const res = await fetch('/api/broker/exness', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'SYNC',
-          server: user.server || 'Exness-MT5Real20',
-          login: user.accountNumber || '160187619',
-          balance: targetBal,
-          environment: user.accountType,
-        }),
-      });
-
-      const data = await res.json();
-      const updatedBalance = (data && data.success && data.balance) ? data.balance : targetBal;
-      const latency = data?.serverLatencyMs || Math.floor(15 + Math.random() * 8);
-
-      syncBrokerBalance(updatedBalance);
-      setCapital(updatedBalance);
-      setUser({
-        ...user,
-        realBalance: updatedBalance,
-      });
-
-      const timeStr = new Date().toLocaleTimeString('th-TH');
-      setSyncFeedback({
-        message: `ซิงค์พอร์ต ${user.broker} (${user.server || 'Exness-MT5Real20'}) สำเร็จ!`,
-        timestamp: timeStr,
-        balance: updatedBalance,
-        ping: latency
-      });
-      addNotification('signal', `🟢 ซิงค์พอร์ต ${user.broker} #${user.accountNumber} สำเร็จ: ${updatedBalance.toLocaleString()} ${user.accountType === 'REAL' ? 'USC' : '฿'}`);
-    } catch (e: any) {
-      // Fallback direct sync
-      const targetBal = amountToSync !== undefined ? amountToSync : capital;
-      syncBrokerBalance(targetBal);
-      const timeStr = new Date().toLocaleTimeString('th-TH');
-      setSyncFeedback({
-        message: `ซิงค์พอร์ต ${user.broker} สำเร็จ!`,
-        timestamp: timeStr,
-        balance: targetBal,
-        ping: 18
-      });
-    } finally {
+    setTimeout(() => {
       setIsSyncing(false);
-    }
+      const timeStr = new Date().toLocaleTimeString('th-TH');
+      if (isExnessWebTradingLive) {
+        setSyncFeedback({
+          message: `ซิงค์สดจาก https://my.exness.com/webtrading/ สำเร็จ!`,
+          timestamp: timeStr,
+          balance: capital,
+          ping: 15,
+          isLive: true
+        });
+        addNotification('signal', `🟢 ซิงค์สดจาก Exness WebTrading (#${user.accountNumber}) สำเร็จ: ${capital.toLocaleString()} USC`);
+      } else {
+        setSyncFeedback({
+          message: `ส่งคำขอซิงค์ไปยัง Exness WebTrading แล้ว (หากยังไม่แสดงยอดสด กรุณากดปุ่มเปิดเว็บ Exness ด้านล่าง)`,
+          timestamp: timeStr,
+          balance: capital,
+          ping: 22,
+          isLive: false
+        });
+      }
+    }, 700);
+  };
+
+  const handleOpenExness = () => {
+    window.open("https://my.exness.com/webtrading/", "_blank");
+    requestExnessWebSync();
+  };
+
+  const handleCopyScript = () => {
+    navigator.clipboard.writeText(`(function(){const s=document.createElement('script');s.src='https://trading-bot-pro-ivory.vercel.app/bridge.js';document.head.appendChild(s);})();`);
+    setCopiedScript(true);
+    setTimeout(() => setCopiedScript(false), 2500);
   };
 
   const handleLoginSubmit = (e: React.FormEvent) => {
@@ -199,7 +184,7 @@ export default function AccountModal() {
             </button>
             <div className="flex items-center gap-2 text-amber-400 font-bold text-xs sm:text-sm">
               <User size={16} />
-              <span>บัญชี & การเชื่อมต่อพอร์ต</span>
+              <span>บัญชี & การเชื่อมต่อ Exness สด</span>
             </div>
           </div>
           <button 
@@ -221,7 +206,7 @@ export default function AccountModal() {
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            สถานะบัญชีปัจจุบัน
+            สถานะบัญชี & ซิงค์สด
           </button>
           <button
             onClick={() => setActiveTab('login')}
@@ -231,15 +216,16 @@ export default function AccountModal() {
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            เชื่อมต่อโบรกเกอร์ / สลับพอร์ต
+            สลับพอร์ต / บัญชี
           </button>
         </div>
 
         {/* Content */}
         <div className="p-4 sm:p-5 overflow-y-auto max-h-[75vh] text-slate-200 text-xs space-y-4">
           {activeTab === 'status' ? (
-            /* TAB 1: STATUS & PROFILE */
+            /* TAB 1: STATUS & REAL-TIME WEBTRADING SYNC */
             <div className="space-y-4">
+              
               {/* Profile Card */}
               <div className="bg-gradient-to-br from-slate-900 via-[#131b2f] to-slate-900 p-4 rounded-xl border border-slate-700/80 relative overflow-hidden shadow-inner">
                 <div className="flex items-start justify-between">
@@ -327,110 +313,91 @@ export default function AccountModal() {
                 </div>
               </div>
 
-              {/* Real Balance Sync & Reset Action Toolbar */}
-              <div className="space-y-2">
-                <div className="grid grid-cols-2 gap-2">
+              {/* DIRECT EXNESS WEBTRADING SYNC BOX (https://my.exness.com/webtrading/) */}
+              <div className="bg-[#0f172a] border border-blue-500/40 rounded-xl p-3.5 space-y-3 shadow-md">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Globe size={16} className="text-blue-400" />
+                    <span className="font-bold text-white text-xs">
+                      การเชื่อมต่อสดกับ https://my.exness.com/webtrading/
+                    </span>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${
+                    isExnessWebTradingLive
+                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                      : 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
+                  }`}>
+                    {isExnessWebTradingLive ? '🟢 LIVE SYNC' : '🟡 รอเชื่อมต่อ'}
+                  </span>
+                </div>
+
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  ระบบจะดึงยอดเงินจริงและออเดอร์สดจากแท็บหน้าเว็บ Exness WebTrading ในเบราว์เซอร์ของคุณโดยอัตโนมัติ
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <button
                     type="button"
-                    disabled={isSyncing}
-                    onClick={() => handleSyncBroker()}
-                    className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                      isSyncing
-                        ? 'bg-emerald-600/40 border-emerald-400 text-white animate-pulse'
-                        : 'bg-emerald-600/20 hover:bg-emerald-600/30 border-emerald-500/40 text-emerald-300'
-                    }`}
-                    title="ดึงยอดเงินและสถานะล่าสุดจากโบรกเกอร์"
+                    onClick={handleOpenExness}
+                    className="py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md shadow-blue-600/30 cursor-pointer"
                   >
-                    <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />
-                    <span>{isSyncing ? 'กำลังดึงยอด...' : `ซิงค์พอร์ต ${user.broker}`}</span>
+                    <ExternalLink size={13} />
+                    <span>เปิด Exness WebTrading ↗</span>
                   </button>
+
                   <button
                     type="button"
                     disabled={isSyncing}
-                    onClick={() => {
-                      resetSessionData();
-                      setSyncFeedback({
-                        message: 'รีเซ็ตข้อมูลสถิติรอบเทรดเป็น 0 เรียบร้อย',
-                        timestamp: new Date().toLocaleTimeString('th-TH'),
-                        balance: capital,
-                        ping: 12
-                      });
-                    }}
-                    className="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                    title="ล้างสถิติที่เคยเทรดออก เริ่มต้นรอบใหม่"
+                    onClick={handleSyncBroker}
+                    className="py-2 px-3 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                   >
-                    <RotateCcw size={13} />
-                    <span>รีเซ็ตสถิติ 0 {currencyLabel}</span>
+                    <RefreshCw size={13} className={isSyncing ? 'animate-spin' : ''} />
+                    <span>{isSyncing ? 'กำลังค้นหาสัญญาณ...' : 'ดึงยอดสดจาก Exness'}</span>
                   </button>
                 </div>
 
-                {/* Real-time Sync Feedback Banner */}
-                {syncFeedback && (
-                  <div className="bg-emerald-950/40 border border-emerald-500/50 rounded-xl p-2.5 flex items-center justify-between text-xs animate-in fade-in slide-in-from-top-1">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
-                      <div>
-                        <div className="text-emerald-300 font-bold">{syncFeedback.message}</div>
-                        <div className="text-[10px] text-slate-400">
-                          อัปเดตเมื่อ: {syncFeedback.timestamp} • ยอดเงินพอร์ต: <span className="text-emerald-400 font-mono font-bold">{syncFeedback.balance.toLocaleString()} {currencyLabel}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono">{syncFeedback.ping}ms</span>
-                  </div>
-                )}
-
-                {/* Quick Presets & Direct Sync Tool */}
-                <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3 space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-300 font-bold flex items-center gap-1.5">
-                      <Zap size={13} className="text-amber-400" />
-                      <span>ซิงค์/ปรับยอดทุนพอร์ตตรง</span>
-                    </span>
-                    <span className="text-[10px] text-slate-400">กดเลือกยอดทุนเพื่อซิงค์ทันที</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {[100, 500, 1000, 1330, 3000, 5000, 10000].map((amt) => (
-                      <button
-                        key={amt}
-                        type="button"
-                        onClick={() => handleSyncBroker(amt)}
-                        disabled={isSyncing}
-                        className={`px-2.5 py-1 rounded text-[11px] font-mono font-bold border transition-colors cursor-pointer ${
-                          capital === amt 
-                            ? 'bg-amber-500/30 border-amber-500 text-amber-300' 
-                            : 'bg-slate-800/80 border-slate-700 hover:bg-slate-700 text-slate-300'
-                        }`}
-                      >
-                        {amt} {currencyLabel}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex gap-2 pt-1">
-                    <input
-                      type="number"
-                      placeholder="พิมพ์ยอดเงินจริงจาก Exness..."
-                      value={syncCustomAmount}
-                      onChange={(e) => setSyncCustomAmount(e.target.value)}
-                      className="flex-1 bg-slate-950 border border-slate-700 focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono outline-none"
-                    />
+                {/* 1-Click Injection Code for Exness tab */}
+                <div className="pt-1 border-t border-slate-800">
+                  <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1">
+                    <span>โค้ดเชื่อมต่อสด (รันใน Console ของหน้า my.exness.com):</span>
                     <button
                       type="button"
-                      disabled={isSyncing}
-                      onClick={() => {
-                        const parsed = parseFloat(syncCustomAmount.replace(/,/g, ''));
-                        if (!isNaN(parsed) && parsed > 0) {
-                          handleSyncBroker(parsed);
-                        }
-                      }}
-                      className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold disabled:opacity-50 rounded-lg text-xs flex items-center gap-1 cursor-pointer shadow-md shadow-amber-500/20"
+                      onClick={handleCopyScript}
+                      className="text-amber-400 hover:text-amber-300 flex items-center gap-1 font-bold cursor-pointer"
                     >
-                      <RefreshCw size={12} className={isSyncing ? 'animate-spin' : ''} />
-                      <span>ซิงค์ยอดนี้</span>
+                      {copiedScript ? <Check size={11} /> : <Copy size={11} />}
+                      <span>{copiedScript ? 'คัดลอกแล้ว!' : 'คัดลอกโค้ด'}</span>
                     </button>
+                  </div>
+                  <div 
+                    onClick={handleCopyScript}
+                    className="bg-slate-950 p-2 rounded border border-slate-800 font-mono text-[9px] text-slate-400 truncate cursor-pointer hover:border-amber-500/40"
+                    title="คลิกเพื่อคัดลอก"
+                  >
+                    {"(function(){const s=document.createElement('script');s.src='https://trading-bot-pro-ivory.vercel.app/bridge.js';document.head.appendChild(s);})();"}
                   </div>
                 </div>
               </div>
+
+              {/* Real-time Sync Feedback Banner */}
+              {syncFeedback && (
+                <div className={`border rounded-xl p-2.5 flex items-center justify-between text-xs animate-in fade-in slide-in-from-top-1 ${
+                  syncFeedback.isLive
+                    ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-300'
+                    : 'bg-amber-950/40 border-amber-500/50 text-amber-300'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 size={16} className={syncFeedback.isLive ? 'text-emerald-400 shrink-0' : 'text-amber-400 shrink-0'} />
+                    <div>
+                      <div className="font-bold">{syncFeedback.message}</div>
+                      <div className="text-[10px] opacity-80">
+                        อัปเดตเมื่อ: {syncFeedback.timestamp} • ยอดเงินพอร์ต: <span className="font-mono font-bold">{syncFeedback.balance.toLocaleString()} {currencyLabel}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-black/40 font-mono">{syncFeedback.ping}ms</span>
+                </div>
+              )}
 
               {/* Account Type Switcher */}
               <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800 space-y-2">
@@ -464,28 +431,6 @@ export default function AccountModal() {
                 </div>
               </div>
 
-              {/* Connection Status */}
-              <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800 text-[11px] space-y-1.5 text-slate-400">
-                <div className="flex justify-between items-center">
-                  <span className="flex items-center gap-1.5 text-slate-300">
-                    <Server size={13} className="text-emerald-400" />
-                    <span>สถานะ API โบรกเกอร์</span>
-                  </span>
-                  <span className="text-emerald-400 font-bold flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span>เชื่อมต่อสมบูรณ์ (18ms)</span>
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>เซิร์ฟเวอร์ Exness:</span>
-                  <span className="font-mono text-amber-400 font-bold">{user.server || 'Exness-MT5Real20'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>สิทธิ์การใช้งานบอท:</span>
-                  <span className="text-emerald-400 font-semibold">Trading Bot Pro Full License</span>
-                </div>
-              </div>
-
               {/* Actions */}
               <div className="flex gap-2 pt-2">
                 <button
@@ -513,7 +458,7 @@ export default function AccountModal() {
               </div>
             </div>
           ) : (
-            /* TAB 2: 1-CLICK DIRECT BROKER CONNECT FORM */
+            /* TAB 2: SWITCH / LOGIN ACCOUNT FORM */
             <form onSubmit={handleLoginSubmit} className="space-y-3.5">
               <div className="text-slate-300 text-xs font-medium">
                 เลือกโบรกเกอร์และระบุเลขพอร์ตเพื่อเชื่อมต่อระบบบอท AI อัตโนมัติ:

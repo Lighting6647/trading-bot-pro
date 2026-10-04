@@ -23,7 +23,10 @@ import {
   ArrowLeft,
   ExternalLink,
   Copy,
-  Check
+  Check,
+  AlertCircle,
+  Download,
+  Bookmark
 } from 'lucide-react';
 import { useTrading } from '@/context/TradingContext';
 
@@ -93,19 +96,19 @@ export default function AccountModal() {
       const timeStr = new Date().toLocaleTimeString('th-TH');
       if (isExnessWebTradingLive) {
         setSyncFeedback({
-          message: `ซิงค์สดจาก https://my.exness.com/webtrading/ สำเร็จ!`,
+          message: `เชื่อมต่อสดกับ https://my.exness.com/webtrading/ สำเร็จ!`,
           timestamp: timeStr,
           balance: capital,
-          ping: 15,
+          ping: 12,
           isLive: true
         });
         addNotification('signal', `🟢 ซิงค์สดจาก Exness WebTrading (#${user.accountNumber}) สำเร็จ: ${capital.toLocaleString()} USC`);
       } else {
         setSyncFeedback({
-          message: `ส่งคำขอซิงค์ไปยัง Exness WebTrading แล้ว (หากยังไม่แสดงยอดสด กรุณากดปุ่มเปิดเว็บ Exness ด้านล่าง)`,
+          message: `ยังไม่พบสัญญาณเชื่อมต่อสดจากแท็บ Exness WebTrading`,
           timestamp: timeStr,
-          balance: capital,
-          ping: 22,
+          balance: 0,
+          ping: 0,
           isLive: false
         });
       }
@@ -314,6 +317,7 @@ export default function AccountModal() {
               </div>
 
               {/* DIRECT EXNESS WEBTRADING SYNC BOX (https://my.exness.com/webtrading/) */}
+              {/* Direct Sync with my.exness.com/webtrading/ */}
               <div className="bg-[#0f172a] border border-blue-500/40 rounded-xl p-3.5 space-y-3 shadow-md">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -322,19 +326,20 @@ export default function AccountModal() {
                       การเชื่อมต่อสดกับ https://my.exness.com/webtrading/
                     </span>
                   </div>
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${
+                  <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold font-mono ${
                     isExnessWebTradingLive
-                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-                      : 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
+                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 animate-pulse'
+                      : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
                   }`}>
-                    {isExnessWebTradingLive ? '🟢 LIVE SYNC' : '🟡 รอเชื่อมต่อ'}
+                    {isExnessWebTradingLive ? '🟢 LIVE SYNC สด' : '⚪ ยังไม่เชื่อมต่อ'}
                   </span>
                 </div>
 
                 <p className="text-[11px] text-slate-300 leading-relaxed">
-                  ระบบจะดึงยอดเงินจริงและออเดอร์สดจากแท็บหน้าเว็บ Exness WebTrading ในเบราว์เซอร์ของคุณโดยอัตโนมัติ
+                  เชื่อมต่อดึงยอดเงินจริงและส่งคำสั่งเทรดสดกับแท็บ <strong className="text-amber-400">my.exness.com/webtrading</strong> ของคุณแบบเรียลไทม์ (ไม่มีการใช้ยอดสมมุติ)
                 </p>
 
+                {/* Primary Action Buttons */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <button
                     type="button"
@@ -342,39 +347,90 @@ export default function AccountModal() {
                     className="py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md shadow-blue-600/30 cursor-pointer"
                   >
                     <ExternalLink size={13} />
-                    <span>เปิด Exness WebTrading ↗</span>
+                    <span>เปิดหน้าเว็บ Exness ↗</span>
                   </button>
 
                   <button
                     type="button"
                     disabled={isSyncing}
                     onClick={handleSyncBroker}
-                    className="py-2 px-3 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                    className={`py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      isExnessWebTradingLive
+                        ? 'bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300'
+                        : 'bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/40 text-amber-300'
+                    }`}
                   >
                     <RefreshCw size={13} className={isSyncing ? 'animate-spin' : ''} />
-                    <span>{isSyncing ? 'กำลังค้นหาสัญญาณ...' : 'ดึงยอดสดจาก Exness'}</span>
+                    <span>{isSyncing ? 'กำลังตรวจจับสัญญาณ...' : 'ตรวจจับยอดสดจาก Exness'}</span>
                   </button>
                 </div>
 
-                {/* 1-Click Injection Code for Exness tab */}
-                <div className="pt-1 border-t border-slate-800">
-                  <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1">
-                    <span>โค้ดเชื่อมต่อสด (รันใน Console ของหน้า my.exness.com):</span>
+                {/* Direct Connection Methods */}
+                <div className="pt-2 border-t border-slate-800 space-y-2">
+                  <div className="text-[11px] font-bold text-slate-300">
+                    เลือกวิธีเชื่อมต่อสดกับแท็บ Exness (เลือกอย่างใดอย่างหนึ่ง):
+                  </div>
+
+                  {/* Method 1: Extension */}
+                  <div className="p-2 rounded-lg bg-slate-900/90 border border-slate-800 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Download size={14} className="text-amber-400 shrink-0" />
+                      <div className="text-[10px]">
+                        <span className="font-bold text-slate-200">วิธีที่ 1: Chrome Extension (แนะนำ)</span>
+                        <div className="text-slate-400">ซิงค์อัตโนมัติ 100% ตลอดเวลาทุกครั้งที่เปิด Exness</div>
+                      </div>
+                    </div>
+                    <a
+                      href="/exness-sync-extension.zip"
+                      download="exness-sync-extension.zip"
+                      className="px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-[10px] font-bold shrink-0 transition-colors"
+                    >
+                      ดาวน์โหลด .ZIP
+                    </a>
+                  </div>
+
+                  {/* Method 2: Bookmarklet */}
+                  <div className="p-2 rounded-lg bg-slate-900/90 border border-slate-800 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Bookmark size={14} className="text-blue-400 shrink-0" />
+                      <div className="text-[10px]">
+                        <span className="font-bold text-slate-200">วิธีที่ 2: 1-Click Bookmarklet</span>
+                        <div className="text-slate-400">ลากไปใส่ที่คั่นหน้าเบราว์เซอร์ แล้วคลิกเมื่อเปิดหน้า Exness</div>
+                      </div>
+                    </div>
                     <button
                       type="button"
-                      onClick={handleCopyScript}
-                      className="text-amber-400 hover:text-amber-300 flex items-center gap-1 font-bold cursor-pointer"
+                      onClick={() => {
+                        navigator.clipboard.writeText("javascript:(function(){const s=document.createElement('script');s.src='https://trading-bot-pro-ivory.vercel.app/bridge.js?t='+Date.now();document.head.appendChild(s);})();");
+                        setCopiedScript(true);
+                        setTimeout(() => setCopiedScript(false), 2000);
+                      }}
+                      className="px-2.5 py-1 rounded bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-blue-300 text-[10px] font-bold shrink-0 transition-colors cursor-pointer"
                     >
-                      {copiedScript ? <Check size={11} /> : <Copy size={11} />}
-                      <span>{copiedScript ? 'คัดลอกแล้ว!' : 'คัดลอกโค้ด'}</span>
+                      {copiedScript ? 'คัดลอกแล้ว!' : 'คัดลอกปุ่ม'}
                     </button>
                   </div>
-                  <div 
-                    onClick={handleCopyScript}
-                    className="bg-slate-950 p-2 rounded border border-slate-800 font-mono text-[9px] text-slate-400 truncate cursor-pointer hover:border-amber-500/40"
-                    title="คลิกเพื่อคัดลอก"
-                  >
-                    {"(function(){const s=document.createElement('script');s.src='https://trading-bot-pro-ivory.vercel.app/bridge.js';document.head.appendChild(s);})();"}
+
+                  {/* Method 3: Console snippet */}
+                  <div className="p-2 rounded-lg bg-slate-900/90 border border-slate-800">
+                    <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1">
+                      <span>วิธีที่ 3: รันโค้ดใน Console (F12) ของหน้า Exness:</span>
+                      <button
+                        type="button"
+                        onClick={handleCopyScript}
+                        className="text-amber-400 hover:text-amber-300 flex items-center gap-1 font-bold cursor-pointer"
+                      >
+                        {copiedScript ? <Check size={11} /> : <Copy size={11} />}
+                        <span>{copiedScript ? 'คัดลอกแล้ว!' : 'คัดลอก'}</span>
+                      </button>
+                    </div>
+                    <div 
+                      onClick={handleCopyScript}
+                      className="bg-slate-950 p-1.5 rounded border border-slate-800 font-mono text-[9px] text-slate-400 truncate cursor-pointer hover:border-amber-500/40"
+                      title="คลิกเพื่อคัดลอก"
+                    >
+                      {"(function(){const s=document.createElement('script');s.src='https://trading-bot-pro-ivory.vercel.app/bridge.js';document.head.appendChild(s);})();"}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -384,18 +440,28 @@ export default function AccountModal() {
                 <div className={`border rounded-xl p-2.5 flex items-center justify-between text-xs animate-in fade-in slide-in-from-top-1 ${
                   syncFeedback.isLive
                     ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-300'
-                    : 'bg-amber-950/40 border-amber-500/50 text-amber-300'
+                    : 'bg-rose-950/40 border-rose-500/50 text-rose-300'
                 }`}>
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 size={16} className={syncFeedback.isLive ? 'text-emerald-400 shrink-0' : 'text-amber-400 shrink-0'} />
+                    {syncFeedback.isLive ? (
+                      <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+                    ) : (
+                      <AlertCircle size={16} className="text-rose-400 shrink-0" />
+                    )}
                     <div>
                       <div className="font-bold">{syncFeedback.message}</div>
                       <div className="text-[10px] opacity-80">
-                        อัปเดตเมื่อ: {syncFeedback.timestamp} • ยอดเงินพอร์ต: <span className="font-mono font-bold">{syncFeedback.balance.toLocaleString()} {currencyLabel}</span>
+                        {syncFeedback.isLive ? (
+                          <>อัปเดตเมื่อ: {syncFeedback.timestamp} • ยอดเงินจริงที่ซิงค์สด: <span className="font-mono font-bold text-emerald-400">{syncFeedback.balance.toLocaleString()} {currencyLabel}</span></>
+                        ) : (
+                          <>โปรดเปิดแท็บ my.exness.com/webtrading แล้วกดเปิดการเชื่อมต่อสด</>
+                        )}
                       </div>
                     </div>
                   </div>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-black/40 font-mono">{syncFeedback.ping}ms</span>
+                  {syncFeedback.isLive && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-black/40 font-mono text-emerald-400">{syncFeedback.ping}ms</span>
+                  )}
                 </div>
               )}
 

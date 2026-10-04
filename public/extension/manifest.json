@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "Trading Bot Pro - Exness Live Sync Bridge",
+  "version": "1.0.0",
+  "description": "เชื่อมต่อยอดเงินสดและส่งคำสั่งเทรดอัตโนมัติจาก my.exness.com/webtrading ไปยัง Trading Bot Pro",
+  "content_scripts": [
+    {
+      "matches": [
+        "https://my.exness.com/*",
+        "https://*.exness.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_end",
+      "all_frames": true
+    }
+  ]
+}
